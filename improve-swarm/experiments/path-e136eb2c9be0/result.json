@@ -1,0 +1,14 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-e136eb2c9be0",
+  "probe": "schema-validate",
+  "tactic": "chaos-inject",
+  "invert_applied": "more-script-before-agent",
+  "kill_blocked": true,
+  "overnight_exit": 1,
+  "overnight_snippet": "Exception: C:\\WPAI\\Software\\StudioOps\\cli\\lib\\WpaiOvernight.ps1:99\r\nLine |\r\n  99 |          throw 'Kill switch active (global or loops) - overnight refus .\r\n     |          ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~\r\n    ",
+  "error": null,
+  "money": false,
+  "verdict": "SUPPORTED",
+  "schema_valid": true
+}

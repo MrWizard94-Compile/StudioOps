@@ -1,0 +1,1 @@
+{"path_id":"path-a8398d344cf1","ok":true,"ms":70,"endpoint":"http://localhost:11434/api/tags","skipped":false,"error":null,"verdict":"SUPPORTED","note":"measure local first; SKIP if down — do not block overnight on ollama"}
