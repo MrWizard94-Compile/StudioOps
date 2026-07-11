@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3aa8ba73f65a",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:39:56.2507732Z",
+  "money": false,
+  "hypothesis": "On token-budget, improve throughput by applying double-entry via slow-down-to-speed-up; validate with property-quick.",
+  "invert": "slow-down-to-speed-up",
+  "tactic": "double-entry",
+  "target": "token-budget",
+  "metrics": {
+    "balanced": true,
+    "elapsed_ms": 11
+  },
+  "auto": true,
+  "lever": "throughput",
+  "probe": "property-quick"
+}

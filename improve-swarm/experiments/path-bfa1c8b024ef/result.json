@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-bfa1c8b024ef",
+  "verdict": "SUPPORTED",
+  "note": "reversibility: outcomes/bans are additive; no destructive catalog force without -Force",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:54.4412330Z",
+  "money": false,
+  "target": "studioops-cli",
+  "tactic": "shadow-mode",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On studioops-cli, improve latency by applying shadow-mode via less-script-more-agent; validate with schema-validate.",
+  "invert": "less-script-more-agent",
+  "probe": "schema-validate",
+  "metrics": {
+    "force_required_for_reseed": true,
+    "elapsed_ms": 1,
+    "files_ok": true
+  }
+}

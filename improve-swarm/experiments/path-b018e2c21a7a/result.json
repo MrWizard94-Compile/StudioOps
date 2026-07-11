@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-b018e2c21a7a",
+  "verdict": "SUPPORTED",
+  "note": "static self-fit score=0.733",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:53.6060859Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "janus-not-direct-write",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via guess-then-falsify; validate with static-score.",
+  "invert": "guess-then-falsify",
+  "probe": "static-score",
+  "metrics": {
+    "score": 0.733,
+    "elapsed_ms": 30,
+    "files_ok": true,
+    "banned": false
+  }
+}

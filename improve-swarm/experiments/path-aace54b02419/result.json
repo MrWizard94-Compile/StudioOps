@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-aace54b02419",
+  "verdict": "SUPPORTED",
+  "note": "status survives chaos check catalog=212",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:54.3191556Z",
+  "money": false,
+  "target": "studioops-cli",
+  "tactic": "fuzz",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On studioops-cli, improve latency by applying fuzz via auto-before-human-for-drafts; validate with docs-delta.",
+  "invert": "auto-before-human-for-drafts",
+  "probe": "docs-delta",
+  "metrics": {
+    "status_ok": true,
+    "elapsed_ms": 105,
+    "files_ok": true
+  }
+}

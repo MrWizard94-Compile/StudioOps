@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-5b79afe62bc4",
+  "verdict": "SUPPORTED",
+  "note": "static self-fit score=0.654",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:48.9847497Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "single-writer",
+  "auto": true,
+  "lever": "determinism",
+  "hypothesis": "On improve-swarm, improve determinism by applying single-writer via borrow-from-avionics; validate with schema-validate.",
+  "invert": "borrow-from-avionics",
+  "probe": "schema-validate",
+  "metrics": {
+    "score": 0.654,
+    "elapsed_ms": 42,
+    "files_ok": true,
+    "banned": false
+  }
+}

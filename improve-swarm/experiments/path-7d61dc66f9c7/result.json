@@ -1,1 +1,20 @@
-{"armed":false,"note":"determinism: scripted dry gate before agent overnight","bus_not_call":true,"dry_first":true,"bus_posted":true,"dry_exit":1,"verdict":"SUPPORTED","path_id":"path-7d61dc66f9c7"}
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7d61dc66f9c7",
+  "verdict": "SUPPORTED",
+  "note": "overnight path remains kill-switch gated (chaos/reliability)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:49.5233705Z",
+  "money": false,
+  "target": "overnight",
+  "tactic": "bus-not-call",
+  "auto": true,
+  "lever": "determinism",
+  "hypothesis": "On overnight, improve determinism by applying bus-not-call via auto-before-human-for-drafts; validate with dry-run-script.",
+  "invert": "auto-before-human-for-drafts",
+  "probe": "dry-run-script",
+  "metrics": {
+    "elapsed_ms": 14,
+    "loops_kill": false
+  }
+}

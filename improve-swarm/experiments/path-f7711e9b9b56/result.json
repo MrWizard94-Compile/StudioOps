@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f7711e9b9b56",
+  "verdict": "SUPPORTED",
+  "note": "self-inject + unleash + auto-experiment present",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:48.9196329Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "queue",
+  "auto": true,
+  "lever": "throughput",
+  "hypothesis": "On improve-swarm, improve throughput by applying queue via less-script-more-agent; validate with static-score.",
+  "invert": "less-script-more-agent",
+  "probe": "static-score",
+  "metrics": {
+    "has_unleash": true,
+    "has_auto": true,
+    "elapsed_ms": 3,
+    "files_ok": true,
+    "has_self": true
+  }
+}
