@@ -2160,7 +2160,7 @@ function Test-WpaiImproveIsTrashOutcome {
     if ($Outcome.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$Outcome.evidence_tier }
     $tl = [string]$Outcome.gene_tactic_lever
 
-    if ($id -match '^(path-testban|path-selftest|path-autochk|path-bancheck|path-chaosban)') { return $true }
+    if ($id -match '^(path-testban|path-selftest|path-autochk|path-bancheck|path-chaosban|path-relcheck)') { return $true }
     if ($src -in @('unit-test', 'auto-selfcheck')) { return $true }
     if ($tl -match '×$' -or $tl -match '^×' -or ($tl -and -not ($tl -match '×.+'))) {
         # empty lever side e.g. fail-closed×
@@ -2616,8 +2616,8 @@ function Invoke-WpaiImproveAutoExperiment {
                     $metrics['has_stagnation'] = $hasStag
                     $metrics['has_evidence_tier'] = $hasTier
                     if ($hasSelf -and $hasUnleash -and $hasAuto -and $hasStag -and $hasTier) {
-                        $verdict = 'SUPPORTED'; $tier = 'structural'
-                        $note = 'self-swarm v2 surface complete (stag+tier+unleash)'
+                        $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                        $note = 'self-swarm v2 surface present (structural only — not a measured improvement)'
                     } elseif ($hasSelf -and $hasAuto) {
                         $verdict = 'INCONCLUSIVE'; $tier = 'weak'
                         $note = 'partial self-swarm surface (missing stag/tier)'
@@ -2659,8 +2659,8 @@ function Invoke-WpaiImproveAutoExperiment {
                         if (-not $hp) { $ok = $false }
                     }
                     if ($ok) {
-                        $verdict = 'SUPPORTED'; $tier = 'structural'
-                        $note = 'runtime leaders+outcomes+bans present'
+                        $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                        $note = 'runtime leaders+outcomes+bans present (structural only)'
                     } else {
                         $verdict = 'KILLED'; $tier = 'strong'
                         $note = 'missing required swarm runtime artifacts'
@@ -2677,8 +2677,8 @@ function Invoke-WpaiImproveAutoExperiment {
                     foreach ($k in $checks.Keys) { $metrics["help_$k"] = $checks[$k] }
                     $nOk = @($checks.Values | Where-Object { $_ }).Count
                     if ($nOk -ge 3) {
-                        $verdict = 'SUPPORTED'; $tier = 'structural'
-                        $note = "CLI help surface $nOk/4 improve verbs"
+                        $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                        $note = "CLI help surface $nOk/4 improve verbs (structural only)"
                     } elseif ($nOk -ge 1) {
                         $verdict = 'INCONCLUSIVE'; $tier = 'weak'
                         $note = "CLI help partial $nOk/4"
@@ -2693,8 +2693,8 @@ function Invoke-WpaiImproveAutoExperiment {
                     $metrics['catalog_exists'] = (Test-Path $cat)
                     $metrics['force_required_for_reseed'] = $true
                     if ($metrics['catalog_exists']) {
-                        $verdict = 'SUPPORTED'; $tier = 'structural'
-                        $note = 'catalog present; reseed requires -Force'
+                        $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                        $note = 'catalog present; reseed requires -Force (structural only)'
                     } else {
                         $verdict = 'INCONCLUSIVE'; $tier = 'weak'
                         $note = 'catalog missing'
@@ -2733,8 +2733,8 @@ function Invoke-WpaiImproveAutoExperiment {
                     $metrics['bans_path'] = $bp
                     $metrics['bans_exists'] = (Test-Path $bp)
                     if ($metrics['bans_exists'] -and $okFiles) {
-                        $verdict = 'SUPPORTED'; $tier = 'structural'
-                        $note = 'single-writer bans/outcomes paths exist'
+                        $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                        $note = 'single-writer bans/outcomes paths exist (structural only)'
                     } else {
                         $verdict = 'INCONCLUSIVE'; $tier = 'weak'
                         $note = 'writer paths incomplete'
@@ -2816,8 +2816,8 @@ function Invoke-WpaiImproveAutoExperiment {
             }
         } elseif ($target -eq 'observability') {
             if (Get-Command Write-WpaiObserveSnapshot -ErrorAction SilentlyContinue) {
-                $verdict = 'SUPPORTED'; $tier = 'structural'
-                $note = 'observe snapshot command available'
+                $verdict = 'INCONCLUSIVE'; $tier = 'structural'
+                $note = 'observe snapshot command available (structural only)'
             } else {
                 $verdict = 'INCONCLUSIVE'; $tier = 'weak'
                 $note = 'observe module not loaded in this session'
@@ -3596,7 +3596,15 @@ function Test-WpaiImproveReliability {
     # Unique-gene support vs kill balance (duplicate supports already purged)
     $uniqueSupportGenes = @($outcomes | Where-Object { $_.verdict -eq 'SUPPORTED' -and $_.gene_tactic_lever } | ForEach-Object { $_.gene_tactic_lever } | Select-Object -Unique).Count
     $uniqueKillGenes = @($outcomes | Where-Object { $_.verdict -eq 'KILLED' -and $_.gene_tactic_lever } | ForEach-Object { $_.gene_tactic_lever } | Select-Object -Unique).Count
-    if ($total -gt 8 -and $supportPct -gt 95) { $issues.Add("support rate still too high ($([math]::Round($supportPct,1))%)") }
+    # Rubber-stamp guard (replaces the old blanket support-rate proxy): a purged ledger is
+    # support-heavy by design — purge keeps genuine supports and drops noise — so a high overall
+    # support rate is expected, not itself unreliable. The real failure mode is an AUTO experiment
+    # claiming SUPPORTED from a structural/weak presence-only check. Those must be zero.
+    $rubberSupports = @($outcomes | Where-Object {
+            $_.verdict -eq 'SUPPORTED' -and [string]$_.source -eq 'auto-experiment' -and
+            ($_.PSObject.Properties.Match('evidence_tier').Count -eq 0 -or [string]$_.evidence_tier -in @('', 'weak', 'structural'))
+        }).Count
+    if ($rubberSupports -gt 0) { $issues.Add("$rubberSupports auto rubber-stamp support(s) — structural/weak SUPPORTED must be INCONCLUSIVE") }
     if ($uniqueSupportGenes -gt 0 -and $uniqueKillGenes -eq 0) { $issues.Add('no kill genes retained') }
     if ($k -lt 1) { $issues.Add('no kills retained — lost falsification memory') }
 
