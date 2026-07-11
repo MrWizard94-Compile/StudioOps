@@ -57,9 +57,37 @@ pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 kill set global true
 pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 overnight disarm
 ```
 
+## Research (funding-gated; no cloud spend by default)
+
+```powershell
+pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 research request -Budget 15
+pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 approve decide <id> approved
+pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 division activate ai_research -Budget 15
+pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 research run -DryRun
+```
+
+## Janus studio-bridge (Node)
+
+```powershell
+node C:\WPAI\AI-Research\Janus\Project-Janus\packages\cli\dist\bin.js janus studio sync
+node C:\WPAI\AI-Research\Janus\Project-Janus\packages\cli\dist\bin.js janus studio plan -f <janus_job.json>
+node C:\WPAI\AI-Research\Janus\Project-Janus\packages\cli\dist\bin.js janus loop run -t <parentId> --max-rounds 3 --wpai-budget-gate
+```
+
+## Bus archive
+
+```powershell
+pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 bus archive
+```
+
 ## Tests
 
 ```powershell
 pwsh -File C:\WPAI\Software\StudioOps\cli\tests\wpai.tests.ps1
 cd C:\WPAI\Software\HellForge; npm test
+cd C:\WPAI\AI-Research\Janus\Project-Janus; pnpm --filter @janus/integrations exec vitest run src/wpai-budget-gate.test.ts
 ```
+
+## Completion matrix
+
+See `docs/COMPLETE-CHECKLIST.md` — all design PRs 01–17 closed except optional registry product decision (PR-12 default skip).

@@ -250,12 +250,31 @@ function Sync-WpaiJanusProjection {
                 $counts[$sk]++
             }
         }
+        $promoKeys = @()
         foreach ($k in $counts.Keys) {
             if ($counts[$k] -ge 3) {
                 Add-WpaiEvent -Blackboard $bb -Kind 'promotion_candidate' -StepKey $k -Actor 'bridge' -Refs @{ count = $counts[$k] }
+                $promoKeys += $k
             }
         }
+        # stash for bus notify after RMW
+        $script:WpaiLastPromoKeys = $promoKeys
     }
+
+    # Bus task to orchestrator for each promotion candidate (Director must ack before build)
+    if ($script:WpaiLastPromoKeys) {
+        foreach ($pk in @($script:WpaiLastPromoKeys)) {
+            try {
+                Write-WpaiBusMessage -Text ("promotion_candidate: $pk (>=3 manual steps / 90d) — Director ack to authorize Software automation") `
+                    -Type 'task' -From 'bridge' -To 'orchestrator' | Out-Null
+            } catch { }
+        }
+    }
+
+    try {
+        Write-WpaiBusMessage -Text ("blackboard_sync gen={0} open={1}" -f $bb.generation, $open) `
+            -Type 'blackboard_sync' -From 'bridge' -To 'all' -Path (Get-WpaiConfigValue -Name 'blackboard_path') | Out-Null
+    } catch { }
 
     return [pscustomobject]@{
         open_tasks   = $open
@@ -263,5 +282,6 @@ function Sync-WpaiJanusProjection {
         parents      = $parents
         generation   = $bb.generation
         updated_at   = $bb.updated_at
+        promotions   = @($script:WpaiLastPromoKeys)
     }
 }

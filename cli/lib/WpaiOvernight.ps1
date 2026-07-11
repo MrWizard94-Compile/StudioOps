@@ -169,7 +169,8 @@ function Start-WpaiOvernight {
                 $bin = if ($parts.Count -gt 1) { $parts[1] } else { '' }
                 $args = @()
                 if ($bin) { $args += $bin }
-                $args += @('loop', 'run', '-t', $parentId, '--max-rounds', '1')
+                # Prefer in-process Janus budget gate (PR-09); still charge + re-check each external invocation
+                $args += @('loop', 'run', '-t', $parentId, '--max-rounds', '1', '--wpai-budget-gate')
                 $argStr = ($args | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } }) -join ' '
 
                 Write-WpaiLog -Name 'overnight' -Message ("START parent={0} round={1}/{2} cmd={3} {4}" -f $parentId, $r, $maxRounds, $exe, $argStr)

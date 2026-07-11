@@ -5,7 +5,7 @@
 | **Document** | WPAI Studio Autonomous AI Architecture |
 | **Author** | Architecture (Grok Build subagent) · for Rob / Director |
 | **Date** | 2026-07-11 |
-| **Status** | Implemented Phase 0–1 (2026-07-11) — `wpai` CLI live; music package-ready gate green; rev 3 design |
+| **Status** | **Complete** (2026-07-11) — PR-01–17 control plane shipped (PR-12 registry optional = skip). Music gate green. Mid-loop `--wpai-budget-gate`. No paid DistroKid/cloud required. |
 | **Scope** | Unification of JanusPrime + HellForge + StudioOps + Deep Research under division-aware HITL control |
 | **Audience** | Senior engineers / solo operator (Director) who know the WPAI tree |
 

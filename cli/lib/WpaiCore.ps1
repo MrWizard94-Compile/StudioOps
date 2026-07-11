@@ -425,6 +425,13 @@ function New-WpaiApprovalTicket {
     $ticket['content_sha256'] = $hash
     $path = Join-Path $script:WpaiApprovalsDir ("{0}.json" -f $id)
     Write-WpaiJsonAtomic -Path $path -Object $ticket
+    # Protocol bus telegram (short); ticket file remains SoT
+    try {
+        if (Get-Command Write-WpaiBusMessage -ErrorAction SilentlyContinue) {
+            Write-WpaiBusMessage -Text ("approve_request: {0}" -f $Summary) -Type 'approve_request' `
+                -From $RequestedBy -To 'director' -Path $path -Id $id | Out-Null
+        }
+    } catch { }
     return [pscustomobject]@{ Ticket = $ticket; Path = $path }
 }
 
@@ -500,6 +507,13 @@ function Set-WpaiApprovalDecision {
         $bb['approvals_pending'] = $pending
         Add-WpaiEvent -Blackboard $bb -Kind 'approval' -StepKey ("approval.{0}" -f $Decision) -Actor $By -Refs @{ approval_id = $tid }
     } | Out-Null
+
+    try {
+        if (Get-Command Write-WpaiBusMessage -ErrorAction SilentlyContinue) {
+            Write-WpaiBusMessage -Text ("approve_result: {0} {1}" -f $tid, $Decision) -Type 'approve_result' `
+                -From $By -To 'all' -Path $path -Id $tid | Out-Null
+        }
+    } catch { }
 
     return $t
 }

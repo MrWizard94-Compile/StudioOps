@@ -39,9 +39,11 @@ $ErrorActionPreference = 'Stop'
 
 $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'lib\WpaiCore.ps1')
+. (Join-Path $here 'lib\WpaiBus.ps1')
 . (Join-Path $here 'lib\WpaiMusic.ps1')
 . (Join-Path $here 'lib\WpaiBridge.ps1')
 . (Join-Path $here 'lib\WpaiOvernight.ps1')
+. (Join-Path $here 'lib\WpaiResearch.ps1')
 
 function Parse-WpaiRest {
     param([string[]]$Args)
@@ -115,6 +117,14 @@ WPAI control plane (on-demand)
   ASSETS (Omni32 via Janus — no auto-deploy)
     wpai assets queue | stats
     wpai assets run <modId>
+
+  RESEARCH (funding-gated; local only)
+    wpai research request [-Budget 20]
+    wpai research status
+    wpai research run [-MetaGenerations 3] [-DryRun]
+
+  BUS
+    wpai bus archive [-Keep 500]
 
   Paths: C:\WPAI\Workspace\.wpai\
   Protocol: C:\WPAI\Workspace\.hellforge\PROTOCOL.md
@@ -371,6 +381,37 @@ switch ($cmd) {
         if ($sub -eq 'check') {
             Get-WpaiPromotionCandidates | Format-Table -AutoSize
         } else { Get-WpaiPromotionCandidates | Format-Table -AutoSize }
+        break
+    }
+    'research' {
+        if ($sub -eq 'request') {
+            $b = if ($Budget -gt 0) { $Budget } else { 20 }
+            $c = Request-WpaiResearchEnable -BudgetUsdMonth $b
+            Write-Host "Ticket: $($c.Path)" -ForegroundColor Green
+            Write-Host "Director: wpai approve decide $($c.Ticket.id) approved"
+            Write-Host "Then:     wpai division activate ai_research -Budget $b"
+        } elseif ($sub -eq 'status') {
+            Test-WpaiResearchAllowed | ConvertTo-Json
+            (Get-WpaiBlackboard).divisions.ai_research | ConvertTo-Json
+        } elseif ($sub -eq 'run') {
+            $mg = if ($MaxRounds -gt 0) { $MaxRounds } else { 3 }
+            if ($map.ContainsKey('MetaGenerations')) { $mg = [int]$map['MetaGenerations'] }
+            $dry = [bool]$DryRun
+            try {
+                $r = Start-WpaiResearchRun -MetaGenerations $mg -DryRun:$dry
+                $r | Format-List
+            } catch {
+                Write-Host ("research refused: {0}" -f $_.Exception.Message) -ForegroundColor Yellow
+                exit 1
+            }
+        } else { throw 'research sub: request | status | run' }
+        break
+    }
+    'bus' {
+        if ($sub -eq 'archive') {
+            $keep = if ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 500 }
+            Invoke-WpaiBusArchive -KeepLines $keep | Format-List
+        } else { throw 'bus sub: archive' }
         break
     }
     'assets' {

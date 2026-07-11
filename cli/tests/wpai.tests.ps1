@@ -13,9 +13,11 @@ function Assert-True($cond, $msg) {
 
 $cli = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 . (Join-Path $cli 'lib\WpaiCore.ps1')
+. (Join-Path $cli 'lib\WpaiBus.ps1')
 . (Join-Path $cli 'lib\WpaiMusic.ps1')
 . (Join-Path $cli 'lib\WpaiBridge.ps1')
 . (Join-Path $cli 'lib\WpaiOvernight.ps1')
+. (Join-Path $cli 'lib\WpaiResearch.ps1')
 
 # Install / defaults
 $r = Ensure-WpaiRuntime
@@ -107,6 +109,21 @@ Assert-True (-not (Read-WpaiOvernightPlan).armed) 'disarmed after run'
 $long = 'x' * 450
 $m = New-HfBusMessage -Text $long -Type 'status' -From 'director' -To 'all'
 Assert-True ($m.text.Length -le 400) "non-chat truncate len=$($m.text.Length)"
+
+# Bus approve_request on ticket
+$beforeBus = (Get-Item (Get-WpaiBusPath)).Length
+$t2 = New-WpaiApprovalTicket -Kind 'generic' -Summary 'bus notify test ticket'
+Assert-True (Test-Path $t2.Path) 'ticket2 written'
+$afterBus = (Get-Item (Get-WpaiBusPath)).Length
+Assert-True ($afterBus -gt $beforeBus) 'bus grew after approve_request'
+
+# Research gate refuses when dormant
+$gate = Test-WpaiResearchAllowed
+Assert-True (-not $gate.ok) 'research blocked while dormant'
+
+# Bus archive dry (may no-op if small)
+$arch = Invoke-WpaiBusArchive -KeepLines 100000
+Assert-True ($null -ne $arch) 'bus archive returns object'
 
 Write-Host ""
 if ($failed -gt 0) {
