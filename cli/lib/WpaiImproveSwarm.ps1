@@ -695,27 +695,41 @@ function Invoke-WpaiImproveLearn {
         $k = "{0}|{1}" -f [string]$b.kind, [string]$b.key
         $existing[$k] = $true
     }
-    $newBans = New-Object System.Collections.Generic.List[object]
-    foreach ($b in @($bansDoc.bans)) { $newBans.Add($b) }
-
-    # Aggregate kills by tactic×lever
+    # Aggregate kills by tactic×lever (clean rebuild; no forever-append of false bans)
     $killByTl = @{}
     $supportByTl = @{}
     $killPaths = @{}
     $supportPaths = @{}
     foreach ($o in $outcomes) {
+        if (Get-Command Test-WpaiImproveIsTrashOutcome -ErrorAction SilentlyContinue) {
+            if (Test-WpaiImproveIsTrashOutcome -Outcome $o) { continue }
+        }
         $tl = [string]$o.gene_tactic_lever
         if (-not $tl -and $o.tactic -and $o.lever) {
             $tl = Get-WpaiImproveGeneKey -Tactic ([string]$o.tactic) -Lever ([string]$o.lever) -Kind tactic_lever
         }
+        # Skip empty-lever genes
+        if ($tl -match '×\s*$' -or $tl -eq '×' -or -not $tl) {
+            if ($o.verdict -ne 'KILLED' -or -not $o.path_id) { continue }
+        }
         $outPathId = [string]$o.path_id
         $v = [string]$o.verdict
         if ($v -eq 'KILLED') {
+            # Only learn bans from strong/measured kills or kill/gen2/experiment sources
+            $tier = ''
+            if ($o.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$o.evidence_tier }
+            $src = [string]$o.source
+            $note = [string]$o.note
+            if ($note -match 'ban/diversity/score fail|ban or diversity property failed') { continue }
+            if ($src -eq 'auto-experiment' -and $tier -notin @('strong', 'measured', '')) {
+                # allow auto strong kills
+            }
+            if ($src -in @('unit-test', 'auto-selfcheck')) { continue }
             if ($tl) {
                 if (-not $killByTl.ContainsKey($tl)) { $killByTl[$tl] = New-Object System.Collections.Generic.List[string] }
                 $killByTl[$tl].Add($outPathId)
             }
-            if ($outPathId) { $killPaths[$outPathId] = $o }
+            if ($outPathId -and $outPathId -notmatch 'testban|selftest|autochk') { $killPaths[$outPathId] = $o }
         } elseif ($v -eq 'SUPPORTED') {
             if ($tl) {
                 if (-not $supportByTl.ContainsKey($tl)) { $supportByTl[$tl] = New-Object System.Collections.Generic.List[string] }
@@ -725,6 +739,9 @@ function Invoke-WpaiImproveLearn {
         }
     }
 
+    # Rebuild bans from clean kills (do not forever-append stale false bans)
+    $newBans = New-Object System.Collections.Generic.List[object]
+    $existing = @{}
     $addedBans = 0
     foreach ($tl in $killByTl.Keys) {
         $evidence = @($killByTl[$tl] | Select-Object -Unique)
@@ -732,9 +749,11 @@ function Invoke-WpaiImproveLearn {
         $supports = if ($supportByTl.ContainsKey($tl)) { @($supportByTl[$tl] | Select-Object -Unique).Count } else { 0 }
         if ($evidence.Count -lt $KillThreshold) { continue }
         if ($supports -gt $evidence.Count) { continue }
-        $parts = $tl -split '×', 2
+        $parts = $tl -split [char]0x00D7, 2
+        if ($parts.Count -lt 2) { $parts = $tl -split '×', 2 }
         $tactic = if ($parts.Count -ge 1) { $parts[0] } else { '' }
         $lever = if ($parts.Count -ge 2) { $parts[1] } else { '' }
+        if (-not $lever) { continue } # never ban empty lever
         $key = $tl
         $ek = "tactic_lever|$key"
         if ($existing.ContainsKey($ek)) { continue }
@@ -1295,72 +1314,74 @@ function Invoke-WpaiImproveProbe {
 function Select-WpaiImproveDiverseTop {
     <#
     .SYNOPSIS
-      Greedy diversity-aware top-K: high score first, then prefer novel target/lever/tactic.
+      Target-first diversity: take best path per target first, then fill by score with soft diversity.
+      Prevents clone-targets filling top-K (which caused false fail-closed kills).
     #>
     param(
         [object[]]$Ranked,
         [int]$Top = 40
     )
     if ($null -eq $Ranked -or $Ranked.Count -eq 0) { return @() }
-    $sorted = @($Ranked | Sort-Object { [double]$_.score } -Descending)
-    $selected = @()
-    $usedTargets = @{}
-    $usedLevers = @{}
-    $usedTactics = @{}
-    $usedTl = @{}
-
-    # Always take absolute best first (if not banned)
-    foreach ($r in $sorted) {
-        if ($r.banned) { continue }
-        $selected += ,$r
-        $usedTargets[[string]$r.target] = 1
-        $usedLevers[[string]$r.lever] = 1
-        $usedTactics[[string]$r.tactic] = 1
-        $usedTl["$($r.tactic)×$($r.lever)"] = 1
-        break
+    $sorted = @($Ranked | Where-Object { -not (Test-WpaiImproveHasBannedFlag $_) } | Sort-Object { [double]$_.score } -Descending)
+    if ($sorted.Count -eq 0) {
+        $sorted = @($Ranked | Sort-Object { [double]$_.score } -Descending)
     }
 
+    $selected = @()
+    $seenIds = @{}
+    $usedTargets = @{}
+    $usedTl = @{}
+
+    # Phase 1: best path for each distinct target (score order of targets by their best)
+    $bestByTarget = @{}
+    foreach ($r in $sorted) {
+        $t = [string]$r.target
+        if (-not $t) { continue }
+        if (-not $bestByTarget.ContainsKey($t)) { $bestByTarget[$t] = $r }
+    }
+    $targetOrder = @($bestByTarget.GetEnumerator() | Sort-Object { [double]$_.Value.score } -Descending)
+    foreach ($entry in $targetOrder) {
+        if ($selected.Count -ge $Top) { break }
+        $r = $entry.Value
+        $id = [string]$r.id
+        if ($seenIds.ContainsKey($id)) { continue }
+        $selected += ,$r
+        $seenIds[$id] = $true
+        $usedTargets[[string]$r.target] = 1
+        $usedTl["$($r.tactic)×$($r.lever)"] = 1
+    }
+
+    # Phase 2: fill remaining slots — prefer new lever/tactic, hard-penalize same target overload
     while ($selected.Count -lt $Top) {
         $best = $null
-        $bestAdj = [double]-1.0
+        $bestAdj = [double]-999
         foreach ($r in $sorted) {
-            if ($r.banned) { continue }
-            $already = $false
-            foreach ($s in $selected) { if ([string]$s.id -eq [string]$r.id) { $already = $true; break } }
-            if ($already) { continue }
-            $bonus = [double]0.0
+            $id = [string]$r.id
+            if ($seenIds.ContainsKey($id)) { continue }
             $t0 = [string]$r.target
             $l0 = [string]$r.lever
             $tac0 = [string]$r.tactic
             $tl0 = "$tac0×$l0"
-            if (-not $usedTargets.ContainsKey($t0)) { $bonus += 0.04 }
-            if (-not $usedLevers.ContainsKey($l0)) { $bonus += 0.03 }
-            if (-not $usedTactics.ContainsKey($tac0)) { $bonus += 0.03 }
-            if (-not $usedTl.ContainsKey($tl0)) { $bonus += 0.05 }
-            if ($usedTargets.ContainsKey($t0) -and [int]$usedTargets[$t0] -ge 3) { $bonus -= 0.06 }
-            if ($usedTl.ContainsKey($tl0) -and [int]$usedTl[$tl0] -ge 2) { $bonus -= 0.08 }
+            $bonus = 0.0
+            if (-not $usedTargets.ContainsKey($t0)) { $bonus += 0.12 }
+            elseif ([int]$usedTargets[$t0] -ge 2) { $bonus -= 0.15 }
+            elseif ([int]$usedTargets[$t0] -ge 1) { $bonus -= 0.04 }
+            if (-not $usedTl.ContainsKey($tl0)) { $bonus += 0.08 }
+            elseif ([int]$usedTl[$tl0] -ge 1) { $bonus -= 0.10 }
             $adj = [double]$r.score + $bonus
-            if ($adj -gt $bestAdj) {
-                $bestAdj = $adj
-                $best = $r
-            }
+            if ($adj -gt $bestAdj) { $bestAdj = $adj; $best = $r }
         }
         if ($null -eq $best) { break }
         $selected += ,$best
+        $seenIds[[string]$best.id] = $true
         $t = [string]$best.target
-        $l = [string]$best.lever
-        $tac = [string]$best.tactic
-        $tl = "$tac×$l"
+        $tl = "$($best.tactic)×$($best.lever)"
         if ($usedTargets.ContainsKey($t)) { $usedTargets[$t] = [int]$usedTargets[$t] + 1 } else { $usedTargets[$t] = 1 }
-        if ($usedLevers.ContainsKey($l)) { $usedLevers[$l] = [int]$usedLevers[$l] + 1 } else { $usedLevers[$l] = 1 }
-        if ($usedTactics.ContainsKey($tac)) { $usedTactics[$tac] = [int]$usedTactics[$tac] + 1 } else { $usedTactics[$tac] = 1 }
         if ($usedTl.ContainsKey($tl)) { $usedTl[$tl] = [int]$usedTl[$tl] + 1 } else { $usedTl[$tl] = 1 }
     }
 
     return @($selected)
 }
-
-# ── Generation / leaders / briefs ────────────────────────────────────────────
 
 function Invoke-WpaiImproveGeneration {
     param(
@@ -1896,58 +1917,180 @@ function Get-WpaiImproveElites {
     }
 }
 
+function Test-WpaiImproveIsTrashOutcome {
+    <#
+    .SYNOPSIS
+      True if outcome is unit-test pollution, auto-selfcheck, empty gene, or rubber-stamp structural fluff.
+    #>
+    param($Outcome)
+    if ($null -eq $Outcome) { return $true }
+    $id = [string]$Outcome.path_id
+    $src = [string]$Outcome.source
+    $note = [string]$Outcome.note
+    $tier = ''
+    if ($Outcome.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$Outcome.evidence_tier }
+    $tl = [string]$Outcome.gene_tactic_lever
+
+    if ($id -match '^(path-testban|path-selftest|path-autochk|path-bancheck|path-chaosban)') { return $true }
+    if ($src -in @('unit-test', 'auto-selfcheck')) { return $true }
+    if ($tl -match '×$' -or $tl -match '^×' -or ($tl -and -not ($tl -match '×.+'))) {
+        # empty lever side e.g. fail-closed×
+        if ($tl -match '×\s*$') { return $true }
+    }
+    # Rubber-stamp notes that never measured a real delta
+    $rubber = @(
+        'self-swarm v2 surface complete',
+        'self-inject \+ unleash \+ auto-experiment present',
+        'CLI help surface',
+        'observe snapshot command available',
+        'catalog present; reseed requires',
+        'status survives chaos check',
+        'reversibility: outcomes/bans are additive',
+        'static self-fit score',
+        'self-meta measurement ms=',
+        'unit-test kill for',
+        'idempotency probe',
+        'ban/diversity/score fail',
+        'ban or diversity property failed'
+    )
+    foreach ($pat in $rubber) {
+        if ($note -match $pat) {
+            # measured ledger/kill-switch notes are not rubber
+            if ($note -match 'ledger append\+dedupe|kill switch|budget ledger balanced|ban_sig=') { continue }
+            return $true
+        }
+    }
+    # Structural auto-support alone is trash for elite purposes (kept as outcome unless weak)
+    if ($src -eq 'auto-experiment' -and $tier -in @('weak', 'structural', '')) {
+        if ($Outcome.verdict -eq 'SUPPORTED') { return $true }
+    }
+    return $false
+}
+
+function Get-WpaiImproveBreakthroughClass {
+    <#
+    .SYNOPSIS
+      Collapse duplicate measured notes into a single breakthrough class key.
+    #>
+    param($Outcome)
+    $id = [string]$Outcome.path_id
+    $note = [string]$Outcome.note
+    $tl = [string]$Outcome.gene_tactic_lever
+    if ($id -eq 'path-6ee11461507d' -or ($Outcome.verdict -eq 'KILLED' -and $tl -match 'raise-context' -and $tl -match 'latency')) {
+        return 'kill:raise-context×latency'
+    }
+    if ($id -eq 'path-8e633381189e' -or $note -match 'kill_switch\.research held under concurrent') {
+        return 'ship:blackboard-integrity-doctor'
+    }
+    if ($id -eq 'path-7d61dc66f9c7' -or $note -match 'dry gate before agent overnight|dry-then-arm') {
+        return 'ship:overnight-dry-before-arm'
+    }
+    if ($id -eq 'path-ac4bacaf07a8' -or $note -match 'prestige archive') {
+        return 'ship:bus-prestige-archive'
+    }
+    if ($id -eq 'path-a8398d344cf1' -or ($note -match 'measure local first' -and $tl -match 'ollama')) {
+        return 'ship:local-ollama-measure-first'
+    }
+    if ($id -eq 'path-e136eb2c9be0' -or $note -match 'kill blocks overnight') {
+        return 'ship:overnight-chaos-kill-gate'
+    }
+    if ($id -eq 'path-bb093e1445e8' -or $note -match 'double-entry charge tests') {
+        return 'ship:janus-double-entry-charge'
+    }
+    if ($note -match 'ledger append\+dedupe|outcomes append') { return 'measured:outcomes-ledger-idempotent' }
+    if ($note -match 'budget ledger balanced') { return 'measured:budget-ledger-balanced' }
+    if ($note -match 'kill switch active when set|loops kill switch') { return 'measured:kill-switch-rmw' }
+    if ($note -match 'ban_sig=-') { return 'measured:ban-signal-in-boost-map' }
+    if ($note -match 'blackboard shape ok') { return 'measured:blackboard-shape' }
+    if ($Outcome.verdict -eq 'KILLED' -and [string]$Outcome.source -in @('kill', 'gen2-results', 'experiment')) {
+        return "kill:$tl"
+    }
+    return $null
+}
+
+function Test-WpaiImproveIsRealBreakthrough {
+    <#
+    .SYNOPSIS
+      Curated shipped paths + first-of-class measured system properties.
+    #>
+    param($Outcome)
+    if ($null -eq $Outcome) { return $false }
+    if (Test-WpaiImproveIsTrashOutcome -Outcome $Outcome) { return $false }
+    $cls = Get-WpaiImproveBreakthroughClass -Outcome $Outcome
+    return ($null -ne $cls -and $cls -ne '')
+}
+
 function Update-WpaiImproveEliteArchive {
     <#
     .SYNOPSIS
-      Promote SUPPORTED outcomes into elite hall-of-fame; never drop on mutate.
+      Elite hall-of-fame: one entry per breakthrough class (curated ship + measured properties).
     #>
-    $outcomes = @(Read-WpaiImproveOutcomes | Where-Object { $_.verdict -eq 'SUPPORTED' })
-    $doc = Get-WpaiImproveElites
+    param([switch]$Rebuild)
+    # Always rebuild from outcomes — class collapse is the source of truth
+    $outcomes = @(Read-WpaiImproveOutcomes | Where-Object {
+            $_.verdict -eq 'SUPPORTED' -or ($_.verdict -eq 'KILLED' -and (Test-WpaiImproveIsRealBreakthrough -Outcome $_))
+        })
+    # Include kills that are breakthroughs (raise-context dead end)
+    $outcomes = @(Read-WpaiImproveOutcomes | Where-Object { Test-WpaiImproveIsRealBreakthrough -Outcome $_ })
     $byId = @{}
-    foreach ($e in @($doc.elites)) {
-        $byId[[string]$e.path_id] = $e
-    }
     $added = 0
+    $classBest = @{} # class -> outcome
     foreach ($o in $outcomes) {
         $id = [string]$o.path_id
         if (-not $id) { continue }
-        if ($byId.ContainsKey($id)) {
-            # refresh note/score if present
-            continue
+        $cls = Get-WpaiImproveBreakthroughClass -Outcome $o
+        if (-not $cls) { continue }
+        $rank = 1
+        if ([string]$o.source -in @('gen2-results', 'kill')) { $rank = 5 }
+        elseif ([string]$o.source -eq 'experiment') { $rank = 4 }
+        elseif ([string]$o.source -eq 'manual') { $rank = 3 }
+        elseif ($o.PSObject.Properties.Match('evidence_tier').Count -and [string]$o.evidence_tier -eq 'measured') { $rank = 2 }
+        if ($o.verdict -eq 'KILLED') { $rank += 1 }
+        if (-not $classBest.ContainsKey($cls) -or $rank -gt [int]$classBest[$cls].rank) {
+            $classBest[$cls] = [pscustomobject]@{ o = $o; rank = $rank; cls = $cls }
         }
+    }
+    foreach ($cls in ($classBest.Keys | Sort-Object)) {
+        $o = $classBest[$cls].o
+        $id = [string]$o.path_id
+        $tier = ''
+        if ($o.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$o.evidence_tier }
         $entry = [ordered]@{
-            path_id           = $id
-            target            = [string]$o.target
-            lever             = [string]$o.lever
-            tactic            = [string]$o.tactic
-            invert            = [string]$o.invert
-            probe             = [string]$o.probe
-            hypothesis        = [string]$o.hypothesis
-            gene_tactic_lever = [string]$o.gene_tactic_lever
-            note              = [string]$o.note
-            promoted_at       = (Get-WpaiUtcNow)
-            source            = [string]$o.source
+            path_id            = $id
+            target             = [string]$o.target
+            lever              = [string]$o.lever
+            tactic             = [string]$o.tactic
+            invert             = [string]$o.invert
+            probe              = [string]$o.probe
+            hypothesis         = [string]$o.hypothesis
+            gene_tactic_lever  = [string]$o.gene_tactic_lever
+            note               = [string]$o.note
+            evidence_tier      = $tier
+            breakthrough_class = $cls
+            verdict            = [string]$o.verdict
+            promoted_at        = (Get-WpaiUtcNow)
+            source             = [string]$o.source
+            breakthrough       = $true
         }
         $byId[$id] = [pscustomobject]$entry
         $added++
     }
-    $elites = @($byId.Values | ForEach-Object {
-            if ($_ -is [System.Collections.IDictionary]) { $_ }
-            else {
-                $h = [ordered]@{}
-                foreach ($p in $_.PSObject.Properties) { $h[$p.Name] = $p.Value }
-                $h
-            }
-        })
+    $elites = @()
+    foreach ($v in $byId.Values) {
+        $h = [ordered]@{}
+        foreach ($prop in $v.PSObject.Properties) { $h[$prop.Name] = $prop.Value }
+        $elites += $h
+    }
     $out = [ordered]@{
-        schema_version = '1.0.0'
+        schema_version = '1.1.0'
         updated_at     = (Get-WpaiUtcNow)
         elites         = $elites
         count          = $elites.Count
+        policy         = 'measured-or-curated-breakthroughs-only'
     }
     $path = Get-WpaiImproveElitePath
     Write-WpaiJsonAtomic -Path $path -Object $out
-    return [pscustomobject]@{ path = $path; count = $elites.Count; added = $added }
+    return [pscustomobject]@{ path = $path; count = $elites.Count; added = $added; rebuilt = [bool]$Rebuild }
 }
 
 # ── Self-targeting genome inject ─────────────────────────────────────────────
@@ -2669,6 +2812,252 @@ function Write-WpaiImproveMetaReport {
         score_variance = $variance
         stagnant_genes = $stagGenes.Count
         tiers         = $tierCounts
+    }
+}
+
+# ── Purge trash + reliability gate ───────────────────────────────────────────
+
+function Invoke-WpaiImprovePurgeTrash {
+    <#
+    .SYNOPSIS
+      Remove unit-test pollution, rubber-stamp auto supports, empty gene bans.
+      Keep curated + measured breakthroughs. Rebuild bans/elites from clean ledger.
+    #>
+    param([switch]$WhatIf)
+
+    $rt = Get-WpaiImproveRuntimeDir
+    $trashDir = Join-Path $rt 'trash'
+    if (-not (Test-Path -LiteralPath $trashDir)) {
+        New-Item -ItemType Directory -Force -Path $trashDir | Out-Null
+    }
+    $stamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
+    $outcomesPath = Get-WpaiImproveOutcomesPath
+    $all = @(Read-WpaiImproveOutcomes)
+    $kept = @()
+    $trashed = @()
+    foreach ($o in $all) {
+        if (Test-WpaiImproveIsRealBreakthrough -Outcome $o) {
+            $kept += $o
+            continue
+        }
+        if (Test-WpaiImproveIsTrashOutcome -Outcome $o) {
+            $trashed += $o
+            continue
+        }
+        # Keep strong kills and measured supports; drop plain weak inconclusives from auto-selfcheck already handled
+        $tier = ''
+        if ($o.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$o.evidence_tier }
+        if ($o.verdict -eq 'KILLED' -and [string]$o.source -notin @('unit-test', 'auto-selfcheck')) {
+            # Drop false auto kills that banned fail-closed due to diversity bug
+            $note = [string]$o.note
+            if ($note -match 'ban/diversity/score fail|ban or diversity property failed') {
+                $trashed += $o
+                continue
+            }
+            $kept += $o
+            continue
+        }
+        if ($o.verdict -eq 'SUPPORTED' -and $tier -eq 'measured') { $kept += $o; continue }
+        if ($o.verdict -eq 'SUPPORTED' -and [string]$o.source -in @('experiment', 'gen2-results', 'manual')) { $kept += $o; continue }
+        if ($o.verdict -eq 'INCONCLUSIVE' -and [string]$o.source -eq 'auto-experiment' -and $tier -eq 'weak') {
+            # keep a sample of weak inconclusives? drop — noise
+            $trashed += $o
+            continue
+        }
+        # Default: drop leftover auto structural supported
+        if ([string]$o.source -eq 'auto-experiment') { $trashed += $o; continue }
+        $kept += $o
+    }
+
+    # Deduplicate kept by path_id+verdict+source+gene keep last
+    $dedup = @{}
+    foreach ($o in $kept) {
+        $key = "{0}|{1}|{2}|{3}" -f $o.path_id, $o.verdict, $o.source, $o.gene_tactic_lever
+        $dedup[$key] = $o
+    }
+    $keptMid = @($dedup.Values | Sort-Object { [string]$_.ts })
+
+    # Cap SUPPORTED noise: at most one non-breakthrough support per gene_tactic_lever
+    # (breakthroughs always kept). Prefer measured > strong > other.
+    $keptFinal = @()
+    $geneSupportSeen = @{}
+    # Pass 1: all kills + breakthroughs + inconclusives
+    foreach ($o in $keptMid) {
+        if ($o.verdict -ne 'SUPPORTED') { $keptFinal += $o; continue }
+        if (Test-WpaiImproveIsRealBreakthrough -Outcome $o) { $keptFinal += $o; continue }
+        $tl = [string]$o.gene_tactic_lever
+        if (-not $tl) { $tl = "id:$($o.path_id)" }
+        $tier = ''
+        if ($o.PSObject.Properties.Match('evidence_tier').Count -gt 0) { $tier = [string]$o.evidence_tier }
+        $rank = switch ($tier) { 'measured' { 3 } 'strong' { 2 } 'structural' { 1 } default { 0 } }
+        if (-not $geneSupportSeen.ContainsKey($tl)) {
+            $geneSupportSeen[$tl] = [pscustomobject]@{ o = $o; rank = $rank }
+        } elseif ($rank -gt [int]$geneSupportSeen[$tl].rank) {
+            $geneSupportSeen[$tl] = [pscustomobject]@{ o = $o; rank = $rank }
+        }
+    }
+    foreach ($g in $geneSupportSeen.Keys) { $keptFinal += $geneSupportSeen[$g].o }
+    # Drop from trashed accounting: anything removed by gene cap
+    $keptIds = @{}
+    foreach ($o in $keptFinal) {
+        $keptIds["{0}|{1}|{2}|{3}" -f $o.path_id, $o.verdict, $o.source, $o.gene_tactic_lever] = $true
+    }
+    foreach ($o in $keptMid) {
+        $key = "{0}|{1}|{2}|{3}" -f $o.path_id, $o.verdict, $o.source, $o.gene_tactic_lever
+        if (-not $keptIds.ContainsKey($key)) { $trashed += $o }
+    }
+
+    $report = [ordered]@{
+        schema_version = '1.0.0'
+        ts             = (Get-WpaiUtcNow)
+        before         = $all.Count
+        kept           = $keptFinal.Count
+        trashed        = $trashed.Count
+        what_if        = [bool]$WhatIf
+    }
+
+    if (-not $WhatIf) {
+        # Archive trash
+        $archive = Join-Path $trashDir ("outcomes-trash-$stamp.jsonl")
+        $utf8 = New-Object System.Text.UTF8Encoding $false
+        $lines = @()
+        foreach ($t in $trashed) {
+            $h = [ordered]@{}
+            foreach ($prop in $t.PSObject.Properties) { $h[$prop.Name] = $prop.Value }
+            $lines += ($h | ConvertTo-Json -Compress -Depth 8)
+        }
+        if ($lines.Count) { [System.IO.File]::WriteAllLines($archive, $lines, $utf8) }
+
+        # Rewrite outcomes
+        $keepLines = @()
+        foreach ($o in $keptFinal) {
+            $h = [ordered]@{}
+            foreach ($prop in $o.PSObject.Properties) { $h[$prop.Name] = $prop.Value }
+            $keepLines += ($h | ConvertTo-Json -Compress -Depth 8)
+        }
+        [System.IO.File]::WriteAllLines($outcomesPath, $keepLines, $utf8)
+
+        # Rebuild bans from scratch (clean)
+        $cleanBans = [ordered]@{
+            schema_version = '1.1.0'
+            updated_at     = (Get-WpaiUtcNow)
+            bans           = @()
+            policy         = 'rebuilt-after-purge'
+        }
+        Write-WpaiJsonAtomic -Path (Get-WpaiImproveBansPath) -Object $cleanBans
+
+        # Learn from clean ledger only
+        $learn = Invoke-WpaiImproveLearn -SkipIngest
+        $elite = Update-WpaiImproveEliteArchive -Rebuild
+        $meta = Write-WpaiImproveMetaReport
+        $report['learn_bans'] = $learn.bans_total
+        $report['elites'] = $elite.count
+        $report['archive'] = $archive
+        $report['meta_path'] = $meta.path
+    }
+
+    return [pscustomobject]$report
+}
+
+function Test-WpaiImproveReliability {
+    <#
+    .SYNOPSIS
+      Gate: self-improvement system is reliable enough to trust for another wave.
+    #>
+    $issues = New-Object System.Collections.Generic.List[string]
+    $outcomes = @(Read-WpaiImproveOutcomes)
+    $bans = Get-WpaiImproveBans
+    $elites = Get-WpaiImproveElites
+
+    # No test pollution in ledger
+    $pollution = @($outcomes | Where-Object {
+            [string]$_.path_id -match 'testban|selftest|autochk|bancheck' -or [string]$_.source -in @('unit-test', 'auto-selfcheck')
+        })
+    if ($pollution.Count -gt 0) { $issues.Add("pollution outcomes=$($pollution.Count)") }
+
+    # No empty-gene bans
+    foreach ($b in @($bans.bans)) {
+        $key = [string]$b.key
+        if ($key -match '×\s*$' -or $key -match '^\s*×') { $issues.Add("empty-gene ban: $key") }
+        if ($key -match 'testban|selftest') { $issues.Add("test path ban: $key") }
+        if ($key -match 'fail-closed' -and [string]$b.reason -match 'diversity') {
+            $issues.Add("false fail-closed ban from diversity bug: $key")
+        }
+    }
+
+    # raise-context×latency must remain banned
+    $hit = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency' -Bans $bans
+    if (-not $hit.banned) { $issues.Add('raise-context×latency not banned (lost real kill learning)') }
+
+    # fail-closed must NOT be banned as a tactic_lever from diversity false positive
+    foreach ($b in @($bans.bans)) {
+        if ([string]$b.kind -eq 'tactic_lever' -and [string]$b.tactic -eq 'fail-closed' -and [string]$b.reason -match 'diversity|ban/diversity') {
+            $issues.Add("false ban remains: $($b.key)")
+        }
+    }
+
+    # Elites: only real breakthroughs, count reasonable
+    $eliteN = @($elites.elites).Count
+    if ($eliteN -lt 2) { $issues.Add("too few elites ($eliteN) — purge too aggressive or no breakthroughs") }
+    if ($eliteN -gt 35) { $issues.Add("too many elites ($eliteN) — still collecting trash") }
+    foreach ($e in @($elites.elites)) {
+        $fake = [pscustomobject]@{
+            path_id = $e.path_id; source = $e.source; note = $e.note
+            evidence_tier = $(if ($e.PSObject.Properties.Match('evidence_tier').Count) { $e.evidence_tier } else { '' })
+            gene_tactic_lever = $(if ($e.PSObject.Properties.Match('gene_tactic_lever').Count) { $e.gene_tactic_lever } else { '' })
+            verdict = 'SUPPORTED'
+        }
+        if (Test-WpaiImproveIsTrashOutcome -Outcome $fake) { $issues.Add("trash elite: $($e.path_id)") }
+    }
+
+    # Diversity property holds
+    $div = @(Select-WpaiImproveDiverseTop -Ranked @(
+            [pscustomobject]@{ id = 'a1'; score = 0.9; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+            [pscustomobject]@{ id = 'a2'; score = 0.89; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+            [pscustomobject]@{ id = 'b1'; score = 0.7; banned = $false; target = 'studioops-cli'; lever = 'dx'; tactic = 'cache' }
+        ) -Top 2)
+    $targets = @($div | ForEach-Object { $_.target } | Select-Object -Unique)
+    if ($targets.Count -lt 2) { $issues.Add("diversity still clone-fills top-2 (targets=$($targets -join ','))") }
+
+    # Fail-closed auto experiment should SUPPORT when ban works
+    $fc = Invoke-WpaiImproveAutoExperiment -Survivor ([pscustomobject]@{
+            id = 'path-relcheck0001'; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fail-closed'
+            invert = 'none'; probe = 'unit-test'
+            hypothesis = 'reliability fail-closed check'; unconventional = $true
+            risk = 'low'; cost_to_try = 'cheap'; banned = $false; score = 0.7
+        }) -Force
+    if ($fc.verdict -ne 'SUPPORTED') {
+        $issues.Add("fail-closed auto should SUPPORT when ban holds (got $($fc.verdict): $($fc.note))")
+    }
+
+    # Outcome mix: not 86% free supports after purge
+    $s = @($outcomes | Where-Object { $_.verdict -eq 'SUPPORTED' }).Count
+    $k = @($outcomes | Where-Object { $_.verdict -eq 'KILLED' }).Count
+    $total = $outcomes.Count
+    $supportPct = if ($total) { 100.0 * $s / $total } else { 0 }
+    # Unique-gene support vs kill balance (duplicate supports already purged)
+    $uniqueSupportGenes = @($outcomes | Where-Object { $_.verdict -eq 'SUPPORTED' -and $_.gene_tactic_lever } | ForEach-Object { $_.gene_tactic_lever } | Select-Object -Unique).Count
+    $uniqueKillGenes = @($outcomes | Where-Object { $_.verdict -eq 'KILLED' -and $_.gene_tactic_lever } | ForEach-Object { $_.gene_tactic_lever } | Select-Object -Unique).Count
+    if ($total -gt 8 -and $supportPct -gt 95) { $issues.Add("support rate still too high ($([math]::Round($supportPct,1))%)") }
+    if ($uniqueSupportGenes -gt 0 -and $uniqueKillGenes -eq 0) { $issues.Add('no kill genes retained') }
+    if ($k -lt 1) { $issues.Add('no kills retained — lost falsification memory') }
+
+    $ok = ($issues.Count -eq 0)
+    $meta = $null
+    try { $meta = Write-WpaiImproveMetaReport } catch { }
+
+    return [pscustomobject]@{
+        ok            = $ok
+        issues        = @($issues)
+        outcomes      = $total
+        supports      = $s
+        kills         = $k
+        elites        = $eliteN
+        bans          = @($bans.bans).Count
+        support_pct   = [math]::Round($supportPct, 1)
+        fail_closed   = $fc.verdict
+        diversity_ok  = ($targets.Count -ge 2)
+        meta_path     = $(if ($meta) { $meta.path } else { $null })
     }
 }
 

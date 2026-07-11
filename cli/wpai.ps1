@@ -170,6 +170,8 @@ WPAI control plane (on-demand)
     wpai improve self-inject              # meta recipes → improve the swarm
     wpai improve auto [-Limit 12] [-SelfOnly]  # auto-experiments on survivors
     wpai improve unleash [-Waves 2] [-AutoLimit 12] [-Briefs 8]  # swarm eats itself
+    wpai improve purge                    # trash rubber-stamps; keep breakthroughs
+    wpai improve doctor                   # reliability gate
     wpai improve status | outcomes | bans | learning | elite
     (see improve-swarm/README.md — diverge → learn → probe → converge → unleash)
 
@@ -700,8 +702,23 @@ switch ($cmd) {
             foreach ($e in @($doc.elites | Select-Object -First 30)) {
                 Write-Output ("  {0}  {1}/{2}/{3}  {4}" -f $e.path_id, $e.target, $e.lever, $e.tactic, $e.note)
             }
+        } elseif ($sub -eq 'purge') {
+            $r = Invoke-WpaiImprovePurgeTrash -WhatIf:$WhatIf
+            Write-Host ("purge: before={0} kept={1} trashed={2} whatIf={3}" -f $r.before, $r.kept, $r.trashed, $r.what_if) -ForegroundColor Yellow
+            if (-not $r.what_if) {
+                Write-Host ("bans={0} elites={1} archive={2}" -f $r.learn_bans, $r.elites, $r.archive) -ForegroundColor Green
+            }
+        } elseif ($sub -eq 'doctor' -or $sub -eq 'reliability') {
+            $r = Test-WpaiImproveReliability
+            if ($r.ok) {
+                Write-Host ("RELIABLE: outcomes={0} elites={1} bans={2} kills={3} support={4}% fail-closed={5}" -f `
+                    $r.outcomes, $r.elites, $r.bans, $r.kills, $r.support_pct, $r.fail_closed) -ForegroundColor Green
+            } else {
+                Write-Host ("NOT RELIABLE: outcomes={0} elites={1} bans={2}" -f $r.outcomes, $r.elites, $r.bans) -ForegroundColor Red
+                foreach ($iss in $r.issues) { Write-Host ("  - {0}" -f $iss) -ForegroundColor Red }
+            }
         } else {
-            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | self-inject | auto | unleash | status | outcomes | bans | learning | elite'
+            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | self-inject | auto | unleash | status | outcomes | bans | learning | elite | purge | doctor'
         }
         break
     }

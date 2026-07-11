@@ -110,6 +110,15 @@ pwsh -File cli\wpai.ps1 improve elite
 
 Auto-experiments default to **INCONCLUSIVE**, not free SUPPORTED. Presence-only checks are structural at best. See `META.md` for kill rate + score variance.
 
+## Reliability (trash out, breakthroughs in)
+
+```powershell
+wpai improve purge     # drop rubber-stamps, unit-test pollution, false bans
+wpai improve doctor    # must print RELIABLE before trusting the swarm
+```
+
+See **`BREAKTHROUGHS.md`** for the curated ship list (raise-context kill, blackboard doctor, overnight dry-gate, etc.). Elites are **one per breakthrough class**, not every auto-probe echo.
+
 ## Learning rules
 
 1. **Kills** under `kills/path-….md` → outcome `KILLED`.
