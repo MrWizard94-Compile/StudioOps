@@ -39,6 +39,9 @@ param(
     [int]$Keep = 0,
     [int]$Inject = 0,
     [int]$Briefs = 0,
+    [int]$Waves = 0,
+    [int]$AutoLimit = 0,
+    [int]$Limit = 0,
     [string]$PathId = '',
     [string]$Verdict = '',
     [string]$Note = '',
@@ -46,6 +49,7 @@ param(
     [switch]$SkipTasks,
     [switch]$SkipLearn,
     [switch]$SkipMutate,
+    [switch]$SelfOnly,
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -163,8 +167,11 @@ WPAI control plane (on-demand)
     wpai improve record -PathId path-... -Verdict KILLED|SUPPORTED [-Note "..."]
     wpai improve learn                    # ingest kills/experiments → bans
     wpai improve run [-Top 40] [-Probe 12] [-Briefs 8]  # learn→mutate→gen
-    wpai improve status | outcomes | bans | learning
-    (see improve-swarm/README.md — diverge → learn → probe → converge)
+    wpai improve self-inject              # meta recipes → improve the swarm
+    wpai improve auto [-Limit 12] [-SelfOnly]  # auto-experiments on survivors
+    wpai improve unleash [-Waves 2] [-AutoLimit 12] [-Briefs 8]  # swarm eats itself
+    wpai improve status | outcomes | bans | learning | elite
+    (see improve-swarm/README.md — diverge → learn → probe → converge → unleash)
 
   OBSERVE (high-signal snapshot; append-only jsonl — not a poll loop)
     wpai observe snapshot [-SkipTasks] [-Quiet]
@@ -648,8 +655,45 @@ switch ($cmd) {
             }
         } elseif ($sub -eq 'learning') {
             Write-Output (Get-WpaiImproveLearningReport)
+        } elseif ($sub -eq 'self-inject' -or $sub -eq 'selfinject') {
+            $extra = if ($Inject -gt 0) { $Inject } elseif ($map.ContainsKey('ExtraMutants')) { [int]$map['ExtraMutants'] } else { 40 }
+            $r = Invoke-WpaiImproveSelfInject -ExtraMutants $extra -ReplaceCatalog:$Force
+            Write-Host ("self-inject: catalog={0} injected={1} skipped_banned={2}" -f $r.count, $r.injected, $r.skipped_banned) -ForegroundColor Green
+        } elseif ($sub -eq 'auto') {
+            $lim = if ($AutoLimit -gt 0) { $AutoLimit } elseif ($Limit -gt 0) { $Limit } elseif ($map.ContainsKey('Limit')) { [int]$map['Limit'] } elseif ($map.ContainsKey('AutoLimit')) { [int]$map['AutoLimit'] } else { 12 }
+            $r = Invoke-WpaiImproveAutoWave -Limit $lim -SelfOnly:$SelfOnly
+            Write-Host ("auto-wave gen {0}: {1} attempted · {2} SUPPORTED · {3} KILLED · {4} INCONCLUSIVE" -f `
+                $r.generation, $r.attempted, $r.supported, $r.killed, $r.inconclusive) -ForegroundColor Green
+            foreach ($x in $r.results) {
+                $col = if ($x.verdict -eq 'SUPPORTED') { 'Green' } elseif ($x.verdict -eq 'KILLED') { 'Red' } else { 'Yellow' }
+                Write-Host ("  [{0}] {1}  {2}/{3}  {4}" -f $x.verdict, $x.path_id, $x.target, $x.tactic, $x.note) -ForegroundColor $col
+            }
+            Write-Host 'Next: wpai improve learn'
+        } elseif ($sub -eq 'unleash') {
+            $wv = if ($Waves -gt 0) { $Waves } elseif ($map.ContainsKey('Waves')) { [int]$map['Waves'] } else { 2 }
+            $topN = if ($Top -gt 0) { $Top } elseif ($map.ContainsKey('Top')) { [int]$map['Top'] } else { 40 }
+            $probeN = if ($Probe -gt 0) { $Probe } elseif ($map.ContainsKey('Probe')) { [int]$map['Probe'] } else { 16 }
+            $lim = if ($AutoLimit -gt 0) { $AutoLimit } elseif ($map.ContainsKey('AutoLimit')) { [int]$map['AutoLimit'] } else { 12 }
+            $k = if ($Keep -gt 0) { $Keep } elseif ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 28 }
+            $inj = if ($Inject -gt 0) { $Inject } elseif ($map.ContainsKey('Inject')) { [int]$map['Inject'] } else { 60 }
+            $br = if ($Briefs -gt 0) { $Briefs } elseif ($map.ContainsKey('Briefs')) { [int]$map['Briefs'] } else { 8 }
+            Write-Host ("UNLEASH: waves={0} autoLimit={1} (swarm → self)" -f $wv, $lim) -ForegroundColor Magenta
+            $r = Invoke-WpaiImproveUnleash -Waves $wv -Top $topN -Probe $probeN -AutoLimit $lim -Keep $k -Inject $inj -Briefs $br -SelfOnlyAuto:$SelfOnly
+            Write-Host ("done: gen={0} wall={1}s supported={2} killed={3}" -f $r.final_generation, $r.wall_sec, $r.total_supported, $r.total_killed) -ForegroundColor Green
+            Write-Host ("report: {0}" -f $r.unleash_path)
+            foreach ($wr in $r.reports) {
+                Write-Host ("  wave {0} gen {1}: auto {2}S/{3}K/{4}I  elites={5}" -f `
+                    $wr.wave, $wr.generation, $wr.auto_supported, $wr.auto_killed, $wr.auto_inconclusive, $wr.elites_total) -ForegroundColor Cyan
+            }
+        } elseif ($sub -eq 'elite' -or $sub -eq 'elites') {
+            $el = Update-WpaiImproveEliteArchive
+            $doc = Get-WpaiImproveElites
+            Write-Host ("elites: {0} (added now {1}) @ {2}" -f $el.count, $el.added, $el.path) -ForegroundColor Green
+            foreach ($e in @($doc.elites | Select-Object -First 30)) {
+                Write-Output ("  {0}  {1}/{2}/{3}  {4}" -f $e.path_id, $e.target, $e.lever, $e.tactic, $e.note)
+            }
         } else {
-            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | status | outcomes | bans | learning'
+            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | self-inject | auto | unleash | status | outcomes | bans | learning | elite'
         }
         break
     }

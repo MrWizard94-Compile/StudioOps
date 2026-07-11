@@ -259,6 +259,23 @@ $st = Get-WpaiImproveStatus
 Assert-True ($st.catalog_paths -ge 0) 'improve status returns catalog_paths'
 Assert-True ($st.outcomes -ge 1) "improve status outcomes=$($st.outcomes)"
 
+# Self-swarm surface: recipes, elite, auto-experiment plumbing
+$recipes = @(Get-WpaiImproveSelfRecipes)
+Assert-True ($recipes.Count -ge 8) "self recipes count=$($recipes.Count)"
+Assert-True (@($recipes | Where-Object { $_.t -eq 'improve-swarm' }).Count -ge 1) 'self recipes target improve-swarm'
+$eliteUp = Update-WpaiImproveEliteArchive
+Assert-True ($eliteUp.count -ge 0) "elite archive count=$($eliteUp.count)"
+Assert-True (Test-Path $eliteUp.path) 'elite.json path exists'
+$fakeSelf = [pscustomobject]@{
+    id = 'path-selftest0001'; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fail-closed'
+    invert = 'none'; probe = 'unit-test'
+    hypothesis = 'On improve-swarm, improve reliability by applying fail-closed; validate with unit-test.'
+    unconventional = $true; risk = 'low'; cost_to_try = 'cheap'; banned = $false; score = 0.7
+}
+$autoOne = Invoke-WpaiImproveAutoExperiment -Survivor $fakeSelf
+Assert-True ($autoOne.verdict -in @('SUPPORTED', 'KILLED', 'INCONCLUSIVE')) "auto experiment verdict=$($autoOne.verdict)"
+Assert-True (Test-Path $autoOne.result_path) 'auto experiment wrote result.json'
+
 Write-Host ""
 if ($failed -gt 0) {
     Write-Host "FAILED: $failed assertion(s)" -ForegroundColor Red

@@ -62,11 +62,17 @@ pwsh -File cli\wpai.ps1 improve mutate -Keep 30 -Inject 80
 # One-shot cycle: learn → mutate → generation
 pwsh -File cli\wpai.ps1 improve run -Top 40 -Probe 16 -Briefs 8
 
+# Swarm eats itself (meta-evolution)
+pwsh -File cli\wpai.ps1 improve self-inject          # curated improve-swarm recipes
+pwsh -File cli\wpai.ps1 improve auto -Limit 12 -SelfOnly
+pwsh -File cli\wpai.ps1 improve unleash -Waves 2 -AutoLimit 14 -Briefs 10 -SelfOnly
+
 # Inspect learning state
 pwsh -File cli\wpai.ps1 improve status
 pwsh -File cli\wpai.ps1 improve outcomes
 pwsh -File cli\wpai.ps1 improve bans
 pwsh -File cli\wpai.ps1 improve learning
+pwsh -File cli\wpai.ps1 improve elite
 ```
 
 ## Artifacts
@@ -82,6 +88,8 @@ pwsh -File cli\wpai.ps1 improve learning
 | `Workspace\.wpai\improve-swarm\outcomes.jsonl` | Append-only learning ledger |
 | `Workspace\.wpai\improve-swarm\bans.json` | Dead genes (tactic×lever, path ids) |
 | `Workspace\.wpai\improve-swarm\LEARNING.md` | Human summary of bans + supported genes |
+| `Workspace\.wpai\improve-swarm\elite.json` | Hall-of-fame SUPPORTED genes (survive mutate) |
+| `Workspace\.wpai\improve-swarm\UNLEASH.md` | Multi-wave self-evolution report |
 
 ## Fitness (v1, no paid APIs)
 

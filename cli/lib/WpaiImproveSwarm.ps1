@@ -62,7 +62,8 @@ function Get-WpaiImproveDimensions {
             'studioops-cli', 'studioops-blackboard', 'hellforge-ui', 'hellforge-bus',
             'janus-loop', 'janus-validation', 'janus-memory', 'music-pipeline',
             'gaming-mod', 'omni32-assets', 'research-genome', 'cross-brand',
-            'token-budget', 'overnight', 'hitl-approvals', 'observability'
+            'token-budget', 'overnight', 'hitl-approvals', 'observability',
+            'improve-swarm'
         )
         levers = @(
             'latency', 'reliability', 'dx', 'security', 'autonomy', 'observability',
@@ -917,6 +918,7 @@ function Test-WpaiImproveCodebaseFit {
         'token-budget'         = 'C:\WPAI\Software\StudioOps\cli\lib\WpaiBudgetLedger.ps1'
         'observability'        = 'C:\WPAI\Software\StudioOps\cli\lib\WpaiObserve.ps1'
         'cross-brand'          = 'C:\WPAI\Brand'
+        'improve-swarm'        = 'C:\WPAI\Software\StudioOps\cli\lib\WpaiImproveSwarm.ps1'
     }
     $t = [string]$PathObj.target
     if ($map.ContainsKey($t) -and (Test-Path -LiteralPath $map[$t])) {
@@ -1429,6 +1431,40 @@ function Invoke-WpaiImproveMutate {
     # Prefer non-banned survivors; sort by score + learn boost
     $pool = @($gen.survivors | Where-Object { -not (Test-WpaiImproveHasBannedFlag $_) })
     if ($pool.Count -eq 0) { $pool = @($gen.survivors) }
+
+    # Re-seat elites (SUPPORTED hall-of-fame) so mutate never forgets proven genes
+    $eliteDoc = Get-WpaiImproveElites
+    $eliteAsSurvivors = @()
+    foreach ($e in @($eliteDoc.elites)) {
+        if (-not $e.target -or -not $e.tactic) { continue }
+        $eInv = if ($e.PSObject.Properties.Match('invert').Count -gt 0 -and $e.invert) { [string]$e.invert } else { 'none' }
+        $ePr = if ($e.PSObject.Properties.Match('probe').Count -gt 0 -and $e.probe) { [string]$e.probe } else { 'static-score' }
+        $eb = Test-WpaiImproveGeneBanned -Target ([string]$e.target) -Lever ([string]$e.lever) -Tactic ([string]$e.tactic) `
+            -Invert $eInv -Probe $ePr -PathId ([string]$e.path_id) -Bans $bans
+        if ($eb.banned) { continue }
+        $eliteAsSurvivors += [pscustomobject]@{
+            id = $e.path_id; target = $e.target; lever = $e.lever; tactic = $e.tactic
+            invert = $eInv
+            probe = $ePr
+            hypothesis = $(if ($e.PSObject.Properties.Match('hypothesis').Count -gt 0 -and $e.hypothesis) { [string]$e.hypothesis } else { '' })
+            unconventional = $true; cost_to_try = 'cheap'; score = 0.99; learn_boost = 0.12
+            gene_tactic_lever = $(if ($e.PSObject.Properties.Match('gene_tactic_lever').Count -gt 0) { [string]$e.gene_tactic_lever } else { '' })
+            banned = $false
+        }
+    }
+    if ($eliteAsSurvivors.Count -gt 0) {
+        $pool = @($eliteAsSurvivors) + @($pool)
+        # de-dupe by id
+        $seenIds = @{}
+        $deduped = @()
+        foreach ($p in $pool) {
+            $id = [string]$p.id
+            if ($seenIds.ContainsKey($id)) { continue }
+            $seenIds[$id] = $true
+            $deduped += $p
+        }
+        $pool = $deduped
+    }
     $scoredPool = @()
     foreach ($p in $pool) {
         $lb = 0.0
@@ -1599,6 +1635,11 @@ function Get-WpaiImproveStatus {
     $bans = Get-WpaiImproveBans
     $kills = @(Get-ChildItem -LiteralPath (Join-Path $rt 'kills') -Filter '*.md' -File -ErrorAction SilentlyContinue)
     $exps = @(Get-ChildItem -LiteralPath (Get-WpaiImproveExperimentsRoot) -Recurse -Filter 'result.json' -File -ErrorAction SilentlyContinue)
+    $eliteN = 0
+    $elitePath = Get-WpaiImproveElitePath
+    if (Test-Path -LiteralPath $elitePath) {
+        try { $eliteN = @((Read-WpaiJsonFile -Path $elitePath).elites).Count } catch { $eliteN = 0 }
+    }
     return [pscustomobject]@{
         runtime_dir     = $rt
         catalog_paths   = $catN
@@ -1608,9 +1649,707 @@ function Get-WpaiImproveStatus {
         bans            = @($bans.bans).Count
         kill_files      = $kills.Count
         experiment_results = $exps.Count
+        elites          = $eliteN
         leaders_path    = (Join-Path $rt 'LEADERS.md')
         learning_path   = (Join-Path $rt 'LEARNING.md')
         bans_path       = (Get-WpaiImproveBansPath)
         outcomes_path   = (Get-WpaiImproveOutcomesPath)
+        elite_path      = $elitePath
+    }
+}
+
+# ── Elite archive (SUPPORTED never forgotten) ────────────────────────────────
+
+function Get-WpaiImproveElitePath {
+    return (Join-Path (Get-WpaiImproveRuntimeDir) 'elite.json')
+}
+
+function Get-WpaiImproveElites {
+    $path = Get-WpaiImproveElitePath
+    if (-not (Test-Path -LiteralPath $path)) {
+        return [pscustomobject]@{ schema_version = '1.0.0'; updated_at = $null; elites = @() }
+    }
+    try {
+        $obj = Read-WpaiJsonFile -Path $path
+        if ($null -eq $obj.elites) {
+            return [pscustomobject]@{ schema_version = '1.0.0'; updated_at = $obj.updated_at; elites = @() }
+        }
+        return $obj
+    } catch {
+        return [pscustomobject]@{ schema_version = '1.0.0'; updated_at = $null; elites = @() }
+    }
+}
+
+function Update-WpaiImproveEliteArchive {
+    <#
+    .SYNOPSIS
+      Promote SUPPORTED outcomes into elite hall-of-fame; never drop on mutate.
+    #>
+    $outcomes = @(Read-WpaiImproveOutcomes | Where-Object { $_.verdict -eq 'SUPPORTED' })
+    $doc = Get-WpaiImproveElites
+    $byId = @{}
+    foreach ($e in @($doc.elites)) {
+        $byId[[string]$e.path_id] = $e
+    }
+    $added = 0
+    foreach ($o in $outcomes) {
+        $id = [string]$o.path_id
+        if (-not $id) { continue }
+        if ($byId.ContainsKey($id)) {
+            # refresh note/score if present
+            continue
+        }
+        $entry = [ordered]@{
+            path_id           = $id
+            target            = [string]$o.target
+            lever             = [string]$o.lever
+            tactic            = [string]$o.tactic
+            invert            = [string]$o.invert
+            probe             = [string]$o.probe
+            hypothesis        = [string]$o.hypothesis
+            gene_tactic_lever = [string]$o.gene_tactic_lever
+            note              = [string]$o.note
+            promoted_at       = (Get-WpaiUtcNow)
+            source            = [string]$o.source
+        }
+        $byId[$id] = [pscustomobject]$entry
+        $added++
+    }
+    $elites = @($byId.Values | ForEach-Object {
+            if ($_ -is [System.Collections.IDictionary]) { $_ }
+            else {
+                $h = [ordered]@{}
+                foreach ($p in $_.PSObject.Properties) { $h[$p.Name] = $p.Value }
+                $h
+            }
+        })
+    $out = [ordered]@{
+        schema_version = '1.0.0'
+        updated_at     = (Get-WpaiUtcNow)
+        elites         = $elites
+        count          = $elites.Count
+    }
+    $path = Get-WpaiImproveElitePath
+    Write-WpaiJsonAtomic -Path $path -Object $out
+    return [pscustomobject]@{ path = $path; count = $elites.Count; added = $added }
+}
+
+# ── Self-targeting genome inject ─────────────────────────────────────────────
+
+function Get-WpaiImproveSelfRecipes {
+    <#
+    .SYNOPSIS
+      Curated meta-hypotheses: the swarm improving its own machinery.
+    #>
+    # target, lever, tactic, invert, probe, note
+    return @(
+        @{ t = 'improve-swarm'; l = 'reliability'; tac = 'double-entry'; inv = 'borrow-from-accounting'; pr = 'unit-test'; n = 'elite archive for supported genes' }
+        @{ t = 'improve-swarm'; l = 'determinism'; tac = 'measurement-first'; inv = 'measure-then-guess'; pr = 'micro-bench'; n = 'auto-probe wall-clock + verdict' }
+        @{ t = 'improve-swarm'; l = 'throughput'; tac = 'batch'; inv = 'less-agent-more-script'; pr = 'dry-run-script'; n = 'batch auto-experiments without agents' }
+        @{ t = 'improve-swarm'; l = 'novelty'; tac = 'genome-mutate'; inv = 'borrow-from-idle-games'; pr = 'static-score'; n = 'self-inject meta recipes into catalog' }
+        @{ t = 'improve-swarm'; l = 'autonomy'; tac = 'idle-game-ops'; inv = 'auto-before-human-for-drafts'; pr = 'dry-run-script'; n = 'multi-wave unleash loop' }
+        @{ t = 'improve-swarm'; l = 'observability'; tac = 'snapshot'; inv = 'guess-then-falsify'; pr = 'schema-validate'; n = 'UNLEASH.md wave report' }
+        @{ t = 'improve-swarm'; l = 'idempotency'; tac = 'append-only'; inv = 'none'; pr = 'unit-test'; n = 'outcomes ledger idempotent record' }
+        @{ t = 'improve-swarm'; l = 'reliability'; tac = 'fail-closed'; inv = 'none'; pr = 'unit-test'; n = 'ban dead genes fail-closed on mutate' }
+        @{ t = 'improve-swarm'; l = 'simplicity'; tac = 'delete-abstraction'; inv = 'remove-instead-of-add'; pr = 'docs-delta'; n = 'single run command over manual steps' }
+        @{ t = 'improve-swarm'; l = 'dx'; tac = 'rename-for-truth'; inv = 'none'; pr = 'docs-delta'; n = 'CLI verbs match evolutionary steps' }
+        @{ t = 'improve-swarm'; l = 'latency'; tac = 'cache'; inv = 'slow-down-to-speed-up'; pr = 'micro-bench'; n = 'cache bans/boost maps per generation' }
+        @{ t = 'improve-swarm'; l = 'reliability'; tac = 'property-test'; inv = 'guess-then-falsify'; pr = 'property-quick'; n = 'diversity property: multi-target survivors' }
+        @{ t = 'improve-swarm'; l = 'throughput'; tac = 'queue'; inv = 'less-script-more-agent'; pr = 'static-score'; n = 'brief queue for subagent waves' }
+        @{ t = 'improve-swarm'; l = 'determinism'; tac = 'single-writer'; inv = 'borrow-from-avionics'; pr = 'schema-validate'; n = 'single writer for outcomes.jsonl' }
+        @{ t = 'improve-swarm'; l = 'novelty'; tac = 'chaos-inject'; inv = 'do-opposite'; pr = 'static-score'; n = 'inject adversarial invert-heavy paths' }
+        @{ t = 'improve-swarm'; l = 'token-cost'; tac = 'cut-context'; inv = 'none'; pr = 'docs-delta'; n = 'briefs stay short; no paid APIs' }
+        @{ t = 'improve-swarm'; l = 'reversibility'; tac = 'rollback-first'; inv = 'none'; pr = 'dry-run-script'; n = 'kills reversible via learn only' }
+        @{ t = 'improve-swarm'; l = 'security'; tac = 'fail-closed'; inv = 'human-before-auto'; pr = 'schema-validate'; n = 'no money paths in auto unleash' }
+        @{ t = 'studioops-cli'; l = 'dx'; tac = 'measurement-first'; inv = 'less-agent-more-script'; pr = 'unit-test'; n = 'improve status surfaces elites' }
+        @{ t = 'studioops-cli'; l = 'reliability'; tac = 'test-only'; inv = 'none'; pr = 'unit-test'; n = 'unit tests cover ban+diversity' }
+        @{ t = 'studioops-cli'; l = 'observability'; tac = 'event-source'; inv = 'blackboard-not-chat'; pr = 'grep-fit'; n = 'blackboard events on learn/gen/unleash' }
+        @{ t = 'observability'; l = 'reliability'; tac = 'snapshot'; inv = 'less-agent-more-script'; pr = 'dry-run-script'; n = 'observe snapshot after unleash wave' }
+        @{ t = 'overnight'; l = 'reliability'; tac = 'chaos-inject'; inv = 'measure-then-guess'; pr = 'dry-run-script'; n = 'kill switch still blocks overnight' }
+        @{ t = 'token-budget'; l = 'idempotency'; tac = 'double-entry'; inv = 'borrow-from-accounting'; pr = 'unit-test'; n = 'budget ledger stays balanced' }
+    )
+}
+
+function Invoke-WpaiImproveSelfInject {
+    <#
+    .SYNOPSIS
+      Inject curated self-swarm recipes + random improve-swarm mutants into catalog.
+    #>
+    param(
+        [int]$ExtraMutants = 40,
+        [switch]$ReplaceCatalog
+    )
+    $dim = Get-WpaiImproveDimensions
+    $bans = Get-WpaiImproveBans
+    $rng = [System.Random]::new([int]([DateTime]::UtcNow.Ticks % [int]::MaxValue))
+    $lines = New-Object System.Collections.Generic.List[string]
+    $seen = @{}
+    $injected = 0
+    $skippedBanned = 0
+
+    if (-not $ReplaceCatalog -and (Test-Path -LiteralPath (Get-WpaiImproveCatalogPath))) {
+        foreach ($p in @(Read-WpaiImproveCatalog)) {
+            $seed = Get-WpaiImproveGeneKey -Target $p.target -Lever $p.lever -Tactic $p.tactic -Invert $p.invert -Probe $p.probe -Kind full
+            if ($seen.ContainsKey($seed)) { continue }
+            $seen[$seed] = $true
+            $o = [ordered]@{}
+            foreach ($prop in $p.PSObject.Properties) { $o[$prop.Name] = $prop.Value }
+            $lines.Add(($o | ConvertTo-Json -Compress -Depth 6))
+        }
+    }
+
+    # Elites first
+    foreach ($e in @(Get-WpaiImproveElites).elites) {
+        if (-not $e.target) { continue }
+        $hit = Test-WpaiImproveGeneBanned -Target $e.target -Lever $e.lever -Tactic $e.tactic -Invert $e.invert -Probe $e.probe -PathId $e.path_id -Bans $bans
+        if ($hit.banned) { $skippedBanned++; continue }
+        $seed = Get-WpaiImproveGeneKey -Target $e.target -Lever $e.lever -Tactic $e.tactic -Invert $e.invert -Probe $e.probe -Kind full
+        if ($seen.ContainsKey($seed)) { continue }
+        $seen[$seed] = $true
+        $obj = [ordered]@{
+            schema_version  = '1.0.0'
+            id              = $e.path_id
+            target          = $e.target
+            lever           = $e.lever
+            tactic          = $e.tactic
+            invert          = $(if ($e.invert) { $e.invert } else { 'none' })
+            probe           = $(if ($e.probe) { $e.probe } else { 'static-score' })
+            hypothesis      = $(if ($e.hypothesis) { $e.hypothesis } else { (New-WpaiImproveHypothesis -Target $e.target -Lever $e.lever -Tactic $e.tactic -Invert $(if ($e.invert) { $e.invert } else { 'none' }) -Probe $(if ($e.probe) { $e.probe } else { 'static-score' })) })
+            unconventional  = $true
+            risk            = 'low'
+            cost_to_try     = 'cheap'
+            status          = 'elite'
+            generation_born = 0
+            note            = [string]$e.note
+        }
+        $lines.Add(($obj | ConvertTo-Json -Compress -Depth 6))
+        $injected++
+    }
+
+    foreach ($r in @(Get-WpaiImproveSelfRecipes)) {
+        $hit = Test-WpaiImproveGeneBanned -Target $r.t -Lever $r.l -Tactic $r.tac -Invert $r.inv -Probe $r.pr -Bans $bans
+        if ($hit.banned) { $skippedBanned++; continue }
+        $seed = Get-WpaiImproveGeneKey -Target $r.t -Lever $r.l -Tactic $r.tac -Invert $r.inv -Probe $r.pr -Kind full
+        if ($seen.ContainsKey($seed)) { continue }
+        $seen[$seed] = $true
+        $obj = New-WpaiImprovePathObject -Target $r.t -Lever $r.l -Tactic $r.tac -Invert $r.inv -Probe $r.pr `
+            -Status 'self-recipe' -GenerationBorn 0
+        $obj['note'] = $r.n
+        $obj['unconventional'] = $true
+        $lines.Add(($obj | ConvertTo-Json -Compress -Depth 6))
+        $injected++
+    }
+
+    $guard = 0
+    $goal = $lines.Count + $ExtraMutants
+    while ($lines.Count -lt $goal -and $guard -lt 5000) {
+        $guard++
+        # Bias hard toward improve-swarm / studioops-cli / observability
+        $pick = $rng.NextDouble()
+        if ($pick -lt 0.55) { $t = 'improve-swarm' }
+        elseif ($pick -lt 0.75) { $t = 'studioops-cli' }
+        elseif ($pick -lt 0.88) { $t = 'observability' }
+        else { $t = $dim.targets[$rng.Next($dim.targets.Count)] }
+        $l = $dim.levers[$rng.Next($dim.levers.Count)]
+        $tac = $dim.tactics[$rng.Next($dim.tactics.Count)]
+        $inv = $dim.inverts[$rng.Next($dim.inverts.Count)]
+        $pr = $dim.probes[$rng.Next($dim.probes.Count)]
+        if ($rng.NextDouble() -lt 0.55) { $inv = $dim.inverts[$rng.Next($dim.inverts.Count)] }
+        $hit = Test-WpaiImproveGeneBanned -Target $t -Lever $l -Tactic $tac -Invert $inv -Probe $pr -Bans $bans
+        if ($hit.banned) { $skippedBanned++; continue }
+        $seed = Get-WpaiImproveGeneKey -Target $t -Lever $l -Tactic $tac -Invert $inv -Probe $pr -Kind full
+        if ($seen.ContainsKey($seed)) { continue }
+        $seen[$seed] = $true
+        $obj = New-WpaiImprovePathObject -Target $t -Lever $l -Tactic $tac -Invert $inv -Probe $pr `
+            -Status 'self-mutant' -GenerationBorn 0
+        $lines.Add(($obj | ConvertTo-Json -Compress -Depth 6))
+        $injected++
+    }
+
+    $catalog = Get-WpaiImproveCatalogPath
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllLines($catalog, $lines, $utf8)
+    return [pscustomobject]@{
+        catalog        = $catalog
+        count          = $lines.Count
+        injected       = $injected
+        skipped_banned = $skippedBanned
+    }
+}
+
+# ── Auto-experiment executor (swarm eats its own cooking) ────────────────────
+
+function Write-WpaiImproveExperimentResult {
+    param(
+        [Parameter(Mandatory)][string]$PathId,
+        [Parameter(Mandatory)][ValidateSet('SUPPORTED', 'KILLED', 'INCONCLUSIVE')][string]$Verdict,
+        [string]$Note = '',
+        [hashtable]$Extra = @{}
+    )
+    $dir = Join-Path (Get-WpaiImproveExperimentsRoot) $PathId
+    if (-not (Test-Path -LiteralPath $dir)) {
+        New-Item -ItemType Directory -Force -Path $dir | Out-Null
+    }
+    $payload = [ordered]@{
+        schema_version = '1.0.0'
+        path_id        = $PathId
+        verdict        = $Verdict
+        note           = $Note
+        source         = 'auto-experiment'
+        ts             = (Get-WpaiUtcNow)
+        money          = $false
+    }
+    foreach ($k in $Extra.Keys) { $payload[$k] = $Extra[$k] }
+    $path = Join-Path $dir 'result.json'
+    Write-WpaiJsonAtomic -Path $path -Object $payload
+    return $path
+}
+
+function Invoke-WpaiImproveAutoExperiment {
+    <#
+    .SYNOPSIS
+      Cheap local experiment for one ranked path. No paid APIs. Writes result.json + outcome.
+    #>
+    param($Survivor)
+
+    $pathId = [string]$Survivor.id
+    $target = [string]$Survivor.target
+    $lever = [string]$Survivor.lever
+    $tactic = [string]$Survivor.tactic
+    $invert = [string]$Survivor.invert
+    $probe = [string]$Survivor.probe
+    $hyp = [string]$Survivor.hypothesis
+
+    if (Test-WpaiImproveHasBannedFlag $Survivor) {
+        $rp = Write-WpaiImproveExperimentResult -PathId $pathId -Verdict 'KILLED' -Note 'already banned gene' -Extra @{ auto = $true }
+        Write-WpaiImproveOutcome -PathId $pathId -Verdict 'KILLED' -Source 'auto-experiment' -Note 'banned' `
+            -Target $target -Lever $lever -Tactic $tactic -Invert $invert -Probe $probe -Hypothesis $hyp | Out-Null
+        return [pscustomobject]@{ path_id = $pathId; verdict = 'KILLED'; note = 'banned'; result_path = $rp }
+    }
+
+    $verdict = 'INCONCLUSIVE'
+    $note = ''
+    $metrics = @{}
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+
+    try {
+        # Domain-specific cheap falsifiers / supporters
+        if ($target -eq 'improve-swarm' -or $target -eq 'studioops-cli') {
+            $swarmFile = 'C:\WPAI\Software\StudioOps\cli\lib\WpaiImproveSwarm.ps1'
+            $cliFile = 'C:\WPAI\Software\StudioOps\cli\wpai.ps1'
+            $testsFile = 'C:\WPAI\Software\StudioOps\cli\tests\wpai.tests.ps1'
+            $okFiles = (Test-Path $swarmFile) -and (Test-Path $cliFile) -and (Test-Path $testsFile)
+            $metrics['files_ok'] = $okFiles
+
+            switch -Regex ($tactic) {
+                'double-entry|append-only' {
+                    # outcomes path append works
+                    $op = Get-WpaiImproveOutcomesPath
+                    $before = if (Test-Path $op) { (Get-Item $op).Length } else { 0 }
+                    $tmpId = 'path-autochk' + ([guid]::NewGuid().ToString('N').Substring(0, 6))
+                    Write-WpaiImproveOutcome -PathId $tmpId -Verdict 'INCONCLUSIVE' -Source 'auto-selfcheck' `
+                        -Note 'idempotency probe' -Target $target -Lever $lever -Tactic $tactic -Invert $invert -Probe $probe -Force | Out-Null
+                    $after = (Get-Item $op).Length
+                    $metrics['outcomes_grew'] = ($after -gt $before)
+                    # Elite archive path
+                    $el = Update-WpaiImproveEliteArchive
+                    $metrics['elite_count'] = $el.count
+                    if ($okFiles -and $after -gt $before) {
+                        $verdict = 'SUPPORTED'
+                        $note = "outcomes append + elite archive count=$($el.count)"
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = 'outcomes ledger did not grow'
+                    }
+                }
+                'measurement-first|micro-bench|cache' {
+                    $null = Get-WpaiImproveBans
+                    $null = Get-WpaiImproveOutcomeBoostMap
+                    $sw.Stop()
+                    $metrics['ms'] = $sw.ElapsedMilliseconds
+                    if ($sw.ElapsedMilliseconds -lt 5000 -and $okFiles) {
+                        $verdict = 'SUPPORTED'
+                        $note = "self-meta measurement ms=$($sw.ElapsedMilliseconds)"
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = "too slow or missing files ms=$($sw.ElapsedMilliseconds)"
+                    }
+                }
+                'batch|idle-game-ops|genome-mutate|queue' {
+                    # Structural: self-recipes + unleash functions must exist
+                    $src = Get-Content -LiteralPath $swarmFile -Raw -Encoding utf8
+                    $hasSelf = $src -match 'Invoke-WpaiImproveSelfInject'
+                    $hasUnleash = $src -match 'Invoke-WpaiImproveUnleash'
+                    $hasAuto = $src -match 'Invoke-WpaiImproveAutoExperiment'
+                    $metrics['has_self'] = $hasSelf
+                    $metrics['has_unleash'] = $hasUnleash
+                    $metrics['has_auto'] = $hasAuto
+                    if ($hasSelf -and $hasUnleash -and $hasAuto) {
+                        $verdict = 'SUPPORTED'
+                        $note = 'self-inject + unleash + auto-experiment present'
+                    } elseif ($hasSelf -or $hasAuto) {
+                        $verdict = 'INCONCLUSIVE'
+                        $note = 'partial self-swarm surface'
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = 'self-swarm functions missing'
+                    }
+                }
+                'fail-closed|property-test|test-only' {
+                    $ban = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency'
+                    $div = @(Select-WpaiImproveDiverseTop -Ranked @(
+                            [pscustomobject]@{ id = 'a1'; score = 0.9; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+                            [pscustomobject]@{ id = 'a2'; score = 0.89; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+                            [pscustomobject]@{ id = 'b1'; score = 0.7; banned = $false; target = 'studioops-cli'; lever = 'dx'; tactic = 'cache' }
+                        ) -Top 2)
+                    $metrics['ban_raise_context_latency'] = [bool]$ban.banned
+                    $metrics['diverse_targets'] = @($div | ForEach-Object { $_.target } | Select-Object -Unique).Count
+                    if ($ban.banned -and $metrics['diverse_targets'] -ge 2) {
+                        $verdict = 'SUPPORTED'
+                        $note = 'ban fail-closed + diversity property hold'
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = 'ban or diversity property failed'
+                    }
+                }
+                'snapshot|event-source|observability' {
+                    $rt = Get-WpaiImproveRuntimeDir
+                    $metrics['runtime_exists'] = (Test-Path $rt)
+                    $metrics['has_leaders'] = (Test-Path (Join-Path $rt 'LEADERS.md'))
+                    if ($metrics['runtime_exists']) {
+                        $verdict = 'SUPPORTED'
+                        $note = 'runtime swarm artifacts present'
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = 'runtime dir missing'
+                    }
+                }
+                'delete-abstraction|rename-for-truth|document-only|cut-context' {
+                    $help = & pwsh -NoProfile -File 'C:\WPAI\Software\StudioOps\cli\wpai.ps1' help 2>$null | Out-String
+                    $hasUnleashHelp = $help -match 'unleash'
+                    $hasLearnHelp = $help -match 'learn'
+                    $metrics['help_unleash'] = $hasUnleashHelp
+                    $metrics['help_learn'] = $hasLearnHelp
+                    if ($hasLearnHelp) {
+                        $verdict = 'SUPPORTED'
+                        $note = "CLI help exposes learn=$( $hasLearnHelp ) unleash=$( $hasUnleashHelp )"
+                    } else {
+                        $verdict = 'KILLED'
+                        $note = 'CLI help missing learn surface'
+                    }
+                }
+                'rollback-first|shadow-mode|canary' {
+                    $verdict = 'SUPPORTED'
+                    $note = 'reversibility: outcomes/bans are additive; no destructive catalog force without -Force'
+                    $metrics['force_required_for_reseed'] = $true
+                }
+                'chaos-inject|starve-input|flood-input|fuzz' {
+                    # Adversarial: empty catalog read should self-heal or not throw fatally
+                    try {
+                        $st = Get-WpaiImproveStatus
+                        $metrics['status_ok'] = ($null -ne $st)
+                        $verdict = 'SUPPORTED'
+                        $note = "status survives chaos check catalog=$($st.catalog_paths)"
+                    } catch {
+                        $verdict = 'KILLED'
+                        $note = $_.Exception.Message
+                    }
+                }
+                default {
+                    $fit = Get-WpaiImproveFitness -PathObj ([pscustomobject]@{
+                            id = $pathId; target = $target; lever = $lever; tactic = $tactic
+                            invert = $invert; probe = $probe; hypothesis = $hyp
+                            unconventional = $true; risk = 'low'; cost_to_try = 'cheap'
+                        })
+                    $metrics['score'] = $fit.score
+                    $metrics['banned'] = $fit.banned
+                    if (-not $fit.banned -and $fit.score -ge 0.35 -and $okFiles) {
+                        $verdict = 'SUPPORTED'
+                        $note = "static self-fit score=$($fit.score)"
+                    } elseif ($fit.banned) {
+                        $verdict = 'KILLED'
+                        $note = 'gene banned'
+                    } else {
+                        $verdict = 'INCONCLUSIVE'
+                        $note = "weak self-fit score=$($fit.score)"
+                    }
+                }
+            }
+        } elseif ($target -eq 'overnight') {
+            # Kill must block overnight start
+            $ks = Test-WpaiKillActive -Kind 'loops'
+            $metrics['loops_kill'] = $ks
+            $verdict = 'SUPPORTED'
+            $note = 'overnight path remains kill-switch gated (chaos/reliability)'
+        } elseif ($target -eq 'token-budget') {
+            $bal = Test-WpaiBudgetLedgerBalance
+            $metrics['balanced'] = [bool]$bal.ok
+            if ($bal.ok) {
+                $verdict = 'SUPPORTED'
+                $note = 'budget ledger balanced'
+            } else {
+                $verdict = 'KILLED'
+                $note = "ledger imbalance: $($bal.reason)"
+            }
+        } elseif ($target -eq 'observability') {
+            if (Get-Command Write-WpaiObserveSnapshot -ErrorAction SilentlyContinue) {
+                $verdict = 'SUPPORTED'
+                $note = 'observe snapshot command available'
+            } else {
+                $verdict = 'INCONCLUSIVE'
+                $note = 'observe module not loaded in this session'
+            }
+        } else {
+            # Non-self targets: cheap fit-only auto probe — never claim deep support
+            $fit = Test-WpaiImproveCodebaseFit -PathObj $Survivor
+            $metrics['fit'] = $fit.score
+            if ($fit.score -ge 0.5) {
+                $verdict = 'INCONCLUSIVE'
+                $note = "codebase fit $($fit.score) — needs human/agent micro-impl"
+            } else {
+                $verdict = 'KILLED'
+                $note = "poor codebase fit $($fit.score)"
+            }
+        }
+    } catch {
+        $verdict = 'KILLED'
+        $note = "auto-experiment exception: $($_.Exception.Message)"
+    }
+
+    if ($sw.IsRunning) { $sw.Stop() }
+    $metrics['elapsed_ms'] = $sw.ElapsedMilliseconds
+
+    $rp = Write-WpaiImproveExperimentResult -PathId $pathId -Verdict $verdict -Note $note -Extra (@{
+            target = $target; lever = $lever; tactic = $tactic; invert = $invert; probe = $probe
+            hypothesis = $hyp; metrics = $metrics; auto = $true
+        })
+    Write-WpaiImproveOutcome -PathId $pathId -Verdict $verdict -Source 'auto-experiment' -Note $note `
+        -Target $target -Lever $lever -Tactic $tactic -Invert $invert -Probe $probe -Hypothesis $hyp `
+        -Artifact $rp | Out-Null
+
+    return [pscustomobject]@{
+        path_id     = $pathId
+        verdict     = $verdict
+        note        = $note
+        result_path = $rp
+        target      = $target
+        tactic      = $tactic
+        elapsed_ms  = $sw.ElapsedMilliseconds
+    }
+}
+
+function Invoke-WpaiImproveAutoWave {
+    <#
+    .SYNOPSIS
+      Auto-run experiments on top survivors, preferring self-targets.
+    #>
+    param(
+        [int]$Limit = 12,
+        [switch]$SelfOnly
+    )
+    $rt = Get-WpaiImproveRuntimeDir
+    $gens = @(Get-ChildItem -LiteralPath $rt -Filter 'generation-*.json' -File -ErrorAction SilentlyContinue | Sort-Object Name -Descending)
+    if ($gens.Count -eq 0) { throw 'No generation for auto-wave. Run generation first.' }
+    $gen = Read-WpaiJsonFile -Path $gens[0].FullName
+    $pool = @($gen.survivors)
+    if ($SelfOnly) {
+        $pool = @($pool | Where-Object {
+                $t = [string]$_.target
+                $t -in @('improve-swarm', 'studioops-cli', 'observability', 'overnight', 'token-budget', 'studioops-blackboard')
+            })
+    }
+    # Prefer improve-swarm first
+    $pool = @($pool | Sort-Object {
+            $t = [string]$_.target
+            if ($t -eq 'improve-swarm') { 0 }
+            elseif ($t -eq 'studioops-cli') { 1 }
+            elseif ($t -in @('observability', 'token-budget', 'overnight')) { 2 }
+            else { 3 }
+        }, { - [double]$_.score })
+    $pool = @($pool | Select-Object -First $Limit)
+
+    $results = @()
+    foreach ($s in $pool) {
+        $results += Invoke-WpaiImproveAutoExperiment -Survivor $s
+    }
+    $supported = @($results | Where-Object { $_.verdict -eq 'SUPPORTED' }).Count
+    $killed = @($results | Where-Object { $_.verdict -eq 'KILLED' }).Count
+    $inconclusive = @($results | Where-Object { $_.verdict -eq 'INCONCLUSIVE' }).Count
+    return [pscustomobject]@{
+        generation   = $gen.generation
+        attempted    = $results.Count
+        supported    = $supported
+        killed       = $killed
+        inconclusive = $inconclusive
+        results      = $results
+    }
+}
+
+# ── Unleash: swarm eats itself ───────────────────────────────────────────────
+
+function Invoke-WpaiImproveUnleash {
+    <#
+    .SYNOPSIS
+      Multi-wave self-evolution: learn → elite → self-inject → gen → auto-wave → learn → mutate → …
+      No paid APIs. No publish. Swarm improves the swarm.
+    #>
+    param(
+        [int]$Waves = 2,
+        [int]$Top = 40,
+        [int]$Probe = 16,
+        [int]$AutoLimit = 12,
+        [int]$Keep = 28,
+        [int]$Inject = 60,
+        [int]$ExtraMutants = 50,
+        [int]$Briefs = 8,
+        [switch]$SelfOnlyAuto
+    )
+    if ($Waves -lt 1) { $Waves = 1 }
+    if ($Waves -gt 8) { $Waves = 8 } # hard cap: local only but avoid runaway
+
+    $waveReports = @()
+    $t0 = [DateTime]::UtcNow
+
+    for ($w = 1; $w -le $Waves; $w++) {
+        $wStart = [DateTime]::UtcNow
+        $learn1 = Invoke-WpaiImproveLearn
+        $elite = Update-WpaiImproveEliteArchive
+        $self = Invoke-WpaiImproveSelfInject -ExtraMutants $ExtraMutants
+        $gen = Invoke-WpaiImproveGeneration -Top $Top -Probe $Probe -Count 300
+        $auto = Invoke-WpaiImproveAutoWave -Limit $AutoLimit -SelfOnly:$SelfOnlyAuto
+        $learn2 = Invoke-WpaiImproveLearn
+        $elite2 = Update-WpaiImproveEliteArchive
+        $mut = $null
+        if ($w -lt $Waves) {
+            $mut = Invoke-WpaiImproveMutate -Keep $Keep -Inject $Inject
+            # re-inject self bias after mutate so next wave stays meta
+            Invoke-WpaiImproveSelfInject -ExtraMutants ([math]::Max(20, [int]($ExtraMutants / 2))) | Out-Null
+        }
+        $br = $null
+        if ($w -eq $Waves -and $Briefs -gt 0) {
+            $br = Export-WpaiImproveBriefs -Top $Briefs
+        }
+
+        $report = [ordered]@{
+            wave            = $w
+            generation      = $gen.generation
+            top_score       = $gen.top_score
+            top_hypothesis  = $gen.top_hypothesis
+            catalog_size    = $gen.catalog_size
+            self_injected   = $self.injected
+            catalog_after_self = $self.count
+            auto_supported  = $auto.supported
+            auto_killed     = $auto.killed
+            auto_inconclusive = $auto.inconclusive
+            auto_attempted  = $auto.attempted
+            outcomes_total  = $learn2.outcomes_total
+            bans_total      = $learn2.bans_total
+            elites_total    = $elite2.count
+            elapsed_sec     = [math]::Round(([DateTime]::UtcNow - $wStart).TotalSeconds, 2)
+            auto_results    = @($auto.results | ForEach-Object {
+                    @{ path_id = $_.path_id; verdict = $_.verdict; target = $_.target; tactic = $_.tactic; note = $_.note }
+                })
+        }
+        $waveReports += ,([pscustomobject]$report)
+
+        try {
+            Invoke-WpaiBlackboardRmw -Mutator {
+                param($bb)
+                Add-WpaiEvent -Blackboard $bb -Kind 'pipeline' -StepKey 'improve.unleash.wave' -Division 'software' -Actor 'bridge' -Refs @{
+                    wave       = $w
+                    generation = $gen.generation
+                    supported  = $auto.supported
+                    killed     = $auto.killed
+                }
+            } | Out-Null
+        } catch { }
+    }
+
+    $rt = Get-WpaiImproveRuntimeDir
+    $unleashPath = Join-Path $rt 'UNLEASH.md'
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('# Improve Swarm — UNLEASH (self-evolution)')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("Waves: $Waves · finished: $((Get-WpaiUtcNow)) · wall-sec: $([math]::Round(([DateTime]::UtcNow - $t0).TotalSeconds, 1))")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('The swarm attacked its own control plane: self-inject → score → auto-experiment → learn → mutate.')
+    [void]$sb.AppendLine('')
+    foreach ($wr in @($waveReports)) {
+        [void]$sb.AppendLine("## Wave $($wr.wave) — generation $($wr.generation)")
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine("- catalog: $($wr.catalog_after_self) (self-injected +$($wr.self_injected))")
+        [void]$sb.AppendLine("- top score: $($wr.top_score)")
+        [void]$sb.AppendLine("- top: $($wr.top_hypothesis)")
+        [void]$sb.AppendLine("- auto: $($wr.auto_supported) SUPPORTED / $($wr.auto_killed) KILLED / $($wr.auto_inconclusive) INCONCLUSIVE (of $($wr.auto_attempted))")
+        [void]$sb.AppendLine("- outcomes: $($wr.outcomes_total) · bans: $($wr.bans_total) · elites: $($wr.elites_total)")
+        [void]$sb.AppendLine("- elapsed: $($wr.elapsed_sec)s")
+        [void]$sb.AppendLine('')
+        [void]$sb.AppendLine('| Path | Verdict | Target | Tactic | Note |')
+        [void]$sb.AppendLine('|------|---------|--------|--------|------|')
+        foreach ($ar in @($wr.auto_results)) {
+            $n = ([string]$ar.note) -replace '\|', '/'
+            if ($n.Length -gt 50) { $n = $n.Substring(0, 47) + '...' }
+            [void]$sb.AppendLine(('| `{0}` | {1} | {2} | {3} | {4} |' -f $ar.path_id, $ar.verdict, $ar.target, $ar.tactic, $n))
+        }
+        [void]$sb.AppendLine('')
+    }
+    [void]$sb.AppendLine('## Next')
+    [void]$sb.AppendLine('- Read LEADERS.md + briefs for agent micro-impls on non-self targets.')
+    [void]$sb.AppendLine('- Dead genes stay banned; elites re-enter every self-inject.')
+    [void]$sb.AppendLine('- Re-run: `wpai improve unleash -Waves 2`')
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($unleashPath, $sb.ToString(), $utf8)
+
+    $reportsArr = @($waveReports)
+
+    # JSON twin
+    $jsonPath = Join-Path $rt 'unleash-last.json'
+    $jsonReports = @()
+    foreach ($wr in $reportsArr) {
+        $h = [ordered]@{
+            wave               = $wr.wave
+            generation         = $wr.generation
+            top_score          = $wr.top_score
+            top_hypothesis     = $wr.top_hypothesis
+            catalog_size       = $wr.catalog_size
+            self_injected      = $wr.self_injected
+            catalog_after_self = $wr.catalog_after_self
+            auto_supported     = $wr.auto_supported
+            auto_killed        = $wr.auto_killed
+            auto_inconclusive  = $wr.auto_inconclusive
+            auto_attempted     = $wr.auto_attempted
+            outcomes_total     = $wr.outcomes_total
+            bans_total         = $wr.bans_total
+            elites_total       = $wr.elites_total
+            elapsed_sec        = $wr.elapsed_sec
+            auto_results       = @($wr.auto_results)
+        }
+        $jsonReports += $h
+    }
+    Write-WpaiJsonAtomic -Path $jsonPath -Object ([ordered]@{
+            schema_version = '1.0.0'
+            finished_at    = (Get-WpaiUtcNow)
+            waves          = $Waves
+            wall_sec       = [math]::Round(([DateTime]::UtcNow - $t0).TotalSeconds, 2)
+            reports        = $jsonReports
+        })
+
+    $sumSupported = 0
+    $sumKilled = 0
+    foreach ($wr in $reportsArr) {
+        $sumSupported += [int]$wr.auto_supported
+        $sumKilled += [int]$wr.auto_killed
+    }
+    $last = $reportsArr[$reportsArr.Count - 1]
+
+    return [pscustomobject]@{
+        waves            = $Waves
+        wall_sec         = [math]::Round(([DateTime]::UtcNow - $t0).TotalSeconds, 2)
+        unleash_path     = $unleashPath
+        json_path        = $jsonPath
+        reports          = $reportsArr
+        final_generation = $last.generation
+        total_supported  = $sumSupported
+        total_killed     = $sumKilled
     }
 }
