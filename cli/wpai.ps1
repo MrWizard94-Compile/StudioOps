@@ -31,6 +31,11 @@ param(
     [double]$Budget = 0,
     [string]$Reason,
     [int]$OlderThanDays = 0,
+    [int]$Count = 0,
+    [int]$Top = 0,
+    [int]$Probe = 0,
+    [int]$Keep = 0,
+    [int]$Inject = 0,
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -46,6 +51,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'lib\WpaiBridge.ps1')
 . (Join-Path $here 'lib\WpaiOvernight.ps1')
 . (Join-Path $here 'lib\WpaiResearch.ps1')
+. (Join-Path $here 'lib\WpaiImproveSwarm.ps1')
 
 function Parse-WpaiRest {
     param([string[]]$Args)
@@ -129,6 +135,14 @@ WPAI control plane (on-demand)
 
   BUS
     wpai bus archive [-Keep 500]
+
+  IMPROVE SWARM (brute-force path search — hundreds of hypotheses)
+    wpai improve seed [-Count 300] [-Force]
+    wpai improve generation [-Top 40] [-Probe 12]
+    wpai improve leaders
+    wpai improve briefs [-Top 8]
+    wpai improve mutate [-Keep 30] [-Inject 80]
+    (see improve-swarm/README.md — diverge → probe → converge → breakthrough)
 
   Paths: C:\WPAI\Workspace\.wpai\
   Protocol: C:\WPAI\Workspace\.hellforge\PROTOCOL.md
@@ -454,9 +468,41 @@ switch ($cmd) {
     }
     'bus' {
         if ($sub -eq 'archive') {
-            $keep = if ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 500 }
-            Invoke-WpaiBusArchive -KeepLines $keep | Format-List
+            $keepN = if ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 500 }
+            Invoke-WpaiBusArchive -KeepLines $keepN | Format-List
         } else { throw 'bus sub: archive' }
+        break
+    }
+    'improve' {
+        if ($sub -eq 'seed') {
+            $n = if ($Count -gt 0) { $Count } elseif ($map.ContainsKey('Count')) { [int]$map['Count'] } else { 300 }
+            $r = Initialize-WpaiImproveCatalog -Count $n -Force:$Force
+            Write-Host ("catalog: {0} paths @ {1} (regenerated={2})" -f $r.count, $r.path, $r.regenerated) -ForegroundColor Green
+        } elseif ($sub -eq 'generation' -or $sub -eq 'gen') {
+            $topN = if ($Top -gt 0) { $Top } elseif ($map.ContainsKey('Top')) { [int]$map['Top'] } else { 40 }
+            $probeN = if ($Probe -gt 0) { $Probe } elseif ($map.ContainsKey('Probe')) { [int]$map['Probe'] } else { 12 }
+            $n = if ($Count -gt 0) { $Count } else { 300 }
+            $r = Invoke-WpaiImproveGeneration -Top $topN -Probe $probeN -Count $n
+            Write-Host ("generation {0}: catalog={1} survivors={2} top={3}" -f $r.generation, $r.catalog_size, $r.survivors, $r.top_score) -ForegroundColor Green
+            Write-Host ("top: {0}" -f $r.top_hypothesis)
+            Write-Host ("leaders: {0}" -f $r.leaders_path)
+            Write-Host ("artifact: {0}" -f $r.generation_path)
+        } elseif ($sub -eq 'leaders') {
+            Write-Output (Get-WpaiImproveLeaders)
+        } elseif ($sub -eq 'briefs') {
+            $topN = if ($Top -gt 0) { $Top } elseif ($map.ContainsKey('Top')) { [int]$map['Top'] } else { 8 }
+            $r = Export-WpaiImproveBriefs -Top $topN
+            Write-Host ("wrote {0} briefs for generation {1}" -f $r.count, $r.generation) -ForegroundColor Green
+            $r.paths | ForEach-Object { Write-Host "  $_" }
+        } elseif ($sub -eq 'mutate') {
+            $k = if ($Keep -gt 0) { $Keep } elseif ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 30 }
+            $inj = if ($Inject -gt 0) { $Inject } elseif ($map.ContainsKey('Inject')) { [int]$map['Inject'] } else { 80 }
+            $r = Invoke-WpaiImproveMutate -Keep $k -Inject $inj
+            Write-Host ("mutated catalog: {0} paths (from gen {1})" -f $r.count, $r.from_generation) -ForegroundColor Green
+            Write-Host 'Next: wpai improve generation'
+        } else {
+            throw 'improve sub: seed | generation | leaders | briefs | mutate'
+        }
         break
     }
     'assets' {
