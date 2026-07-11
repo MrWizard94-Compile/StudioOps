@@ -331,6 +331,24 @@ $sampleIdea = Get-WpaiImproveFitness -PathObj ([pscustomobject]@{
         unconventional = $true; risk = 'low'; cost_to_try = 'cheap'
     })
 Assert-True ($sampleIdea.score -ge 0) "fitness still scores unseen idea=$($sampleIdea.score)"
+Assert-True ($sampleIdea.explore_method -eq 'ucb1') 'fitness uses ucb1 explore'
+Assert-True ($sampleIdea.explore_bonus -gt 0) "untried gene ucb1 bonus=$($sampleIdea.explore_bonus)"
+
+# Tournament selection returns unique-ish parents
+$tPool = 1..8 | ForEach-Object {
+    [pscustomobject]@{ id = "path-t$_"; score = 0.1 * $_; adj = 0.1 * $_ }
+}
+$tPick = @(Select-WpaiImproveTournament -Pool $tPool -Count 3 -TournamentSize 3)
+Assert-True ($tPick.Count -eq 3) "tournament count=$($tPick.Count)"
+$tIds = @($tPick | ForEach-Object { $_.id } | Select-Object -Unique)
+Assert-True ($tIds.Count -ge 2) "tournament diversity ids=$($tIds.Count)"
+
+# Crowding bonus higher for unused axes
+$crowdNew = Get-WpaiImproveCrowdingBonus -Candidate ([pscustomobject]@{ target = 'zz'; lever = 'yy'; tactic = 'xx' }) `
+    -UsedTargets @{} -UsedLevers @{} -UsedTactics @{} -UsedTl @{}
+$crowdOld = Get-WpaiImproveCrowdingBonus -Candidate ([pscustomobject]@{ target = 'aa'; lever = 'bb'; tactic = 'cc' }) `
+    -UsedTargets @{ aa = 5 } -UsedLevers @{ bb = 5 } -UsedTactics @{ cc = 5 } -UsedTl @{ 'cc×bb' = 5 }
+Assert-True ($crowdNew -gt $crowdOld) "crowding new=$crowdNew > old=$crowdOld"
 
 Write-Host ""
 if ($failed -gt 0) {

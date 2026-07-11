@@ -993,6 +993,148 @@ function Get-WpaiImproveOutcomeBoostMap {
     return $out
 }
 
+function Get-WpaiImproveGeneArmStats {
+    <#
+    .SYNOPSIS
+      Per-gene bandit arms for UCB1 exploration.
+      Inspired by Auer et al. UCB1 (via striatum/BTB MIT/BSD patterns) — not a file copy.
+      reward: SUPPORT=+1, INCONCLUSIVE=+0.15, KILLED=-1.2 (evidence-weighted lightly).
+    #>
+    $outcomes = @(Read-WpaiImproveOutcomes | Where-Object { [string]$_.source -ne 'auto-selfcheck' })
+    $arms = @{} # gene -> @{ pulls; total_reward }
+    $totalPulls = 0
+    foreach ($o in $outcomes) {
+        $tl = [string]$o.gene_tactic_lever
+        if (-not $tl -and $o.tactic -and $o.lever) {
+            $tl = Get-WpaiImproveGeneKey -Tactic ([string]$o.tactic) -Lever ([string]$o.lever) -Kind tactic_lever
+        }
+        if (-not $tl) { continue }
+        if (-not $arms.ContainsKey($tl)) {
+            $arms[$tl] = @{ pulls = 0; total_reward = 0.0 }
+        }
+        $reward = 0.0
+        switch ([string]$o.verdict) {
+            'SUPPORTED' { $reward = 1.0 }
+            'KILLED' { $reward = -1.2 }
+            'INCONCLUSIVE' { $reward = 0.15 }
+            default { $reward = 0.0 }
+        }
+        $arms[$tl].pulls = [int]$arms[$tl].pulls + 1
+        $arms[$tl].total_reward = [double]$arms[$tl].total_reward + $reward
+        $totalPulls++
+    }
+    return [pscustomobject]@{
+        arms        = $arms
+        total_pulls = [math]::Max(1, $totalPulls)
+    }
+}
+
+function Get-WpaiImproveUcb1Bonus {
+    <#
+    .SYNOPSIS
+      UCB1 exploration bonus in [0, ~0.08] for a gene arm.
+      mean_reward + c * sqrt(2 ln N / n_i); never-pulled arms get max explore.
+    #>
+    param(
+        [string]$GeneKey,
+        $ArmStats = $null,
+        [double]$Scale = 0.045
+    )
+    if (-not $GeneKey) { return 0.02 }
+    if ($null -eq $ArmStats) { $ArmStats = Get-WpaiImproveGeneArmStats }
+    $arms = $ArmStats.arms
+    $N = [double]$ArmStats.total_pulls
+    if (-not $arms.ContainsKey($GeneKey) -or [int]$arms[$GeneKey].pulls -le 0) {
+        # Force explore untried genes (classic UCB1 init)
+        return [math]::Round([math]::Min(0.08, $Scale * 1.6), 4)
+    }
+    $n = [double][math]::Max(1, [int]$arms[$GeneKey].pulls)
+    $mean = [double]$arms[$GeneKey].total_reward / $n
+    # Normalize mean roughly into [0,1] for bonus scale (kills negative)
+    $mean01 = [math]::Max(0.0, [math]::Min(1.0, ($mean + 1.2) / 2.2))
+    $uncert = [math]::Sqrt((2.0 * [math]::Log([math]::Max(2.0, $N))) / $n)
+    $ucb = $mean01 + $uncert
+    # Map to small fitness bonus
+    $bonus = $Scale * [math]::Min(1.8, $ucb)
+    return [math]::Round([math]::Max(0.0, [math]::Min(0.08, $bonus)), 4)
+}
+
+function Select-WpaiImproveTournament {
+    <#
+    .SYNOPSIS
+      Tournament selection: sample K candidates, keep highest score. Repeat.
+      Inspired by common GA tournament selection (e.g. fylearn MIT) — algorithm only.
+    #>
+    param(
+        [object[]]$Pool,
+        [int]$Count = 10,
+        [int]$TournamentSize = 3,
+        [System.Random]$Rng = $null
+    )
+    if ($null -eq $Pool -or $Pool.Count -eq 0) { return @() }
+    if ($null -eq $Rng) { $Rng = [System.Random]::new() }
+    $k = [math]::Max(2, [math]::Min($TournamentSize, $Pool.Count))
+    $picked = @()
+    $seen = @{}
+    $guard = 0
+    while ($picked.Count -lt $Count -and $guard -lt ($Count * 20)) {
+        $guard++
+        $best = $null
+        $bestScore = [double]-1e9
+        for ($t = 0; $t -lt $k; $t++) {
+            $cand = $Pool[$Rng.Next($Pool.Count)]
+            $sc = 0.0
+            if ($cand.PSObject.Properties.Match('score').Count) { $sc = [double]$cand.score }
+            if ($cand.PSObject.Properties.Match('adj').Count) { $sc = [double]$cand.adj }
+            if ($sc -gt $bestScore) { $bestScore = $sc; $best = $cand }
+        }
+        if ($null -eq $best) { break }
+        $id = [string]$best.id
+        if ($id -and $seen.ContainsKey($id)) { continue }
+        if ($id) { $seen[$id] = $true }
+        $picked += ,$best
+    }
+    # Fill if tournaments collided
+    if ($picked.Count -lt $Count) {
+        foreach ($p in ($Pool | Sort-Object { if ($_.PSObject.Properties.Match('score').Count) { [double]$_.score } else { 0 } } -Descending)) {
+            if ($picked.Count -ge $Count) { break }
+            $id = [string]$p.id
+            if ($id -and $seen.ContainsKey($id)) { continue }
+            if ($id) { $seen[$id] = $true }
+            $picked += ,$p
+        }
+    }
+    return @($picked)
+}
+
+function Get-WpaiImproveCrowdingBonus {
+    <#
+    .SYNOPSIS
+      Crowding-inspired diversity bonus (NSGA-II spirit: prefer sparse neighborhoods).
+      Axes: target, lever, tactic. Higher when fewer selected share axes.
+      Not a port of any single file — Deb NSGA-II concept only.
+    #>
+    param(
+        $Candidate,
+        $UsedTargets,
+        $UsedLevers,
+        $UsedTactics,
+        $UsedTl
+    )
+    $t = [string]$Candidate.target
+    $l = [string]$Candidate.lever
+    $tac = [string]$Candidate.tactic
+    $tl = "$tac×$l"
+    # Inverse density on each axis (bounded)
+    $dt = if ($UsedTargets.ContainsKey($t)) { 1.0 / (1.0 + [int]$UsedTargets[$t]) } else { 1.0 }
+    $dl = if ($UsedLevers.ContainsKey($l)) { 1.0 / (1.0 + [int]$UsedLevers[$l]) } else { 1.0 }
+    $dta = if ($UsedTactics.ContainsKey($tac)) { 1.0 / (1.0 + [int]$UsedTactics[$tac]) } else { 1.0 }
+    $dtl = if ($UsedTl.ContainsKey($tl)) { 1.0 / (1.0 + [int]$UsedTl[$tl]) } else { 1.0 }
+    # Average sparsity → bonus up to ~0.14
+    $sparse = ($dt + $dl + $dta + $dtl) / 4.0
+    return 0.14 * $sparse
+}
+
 function Get-WpaiImproveStagnationMap {
     <#
     .SYNOPSIS
@@ -1127,11 +1269,13 @@ function Get-WpaiImproveFitness {
         $PathObj,
         $Bans = $null,
         $BoostMap = $null,
-        $Stagnation = $null
+        $Stagnation = $null,
+        $ArmStats = $null
     )
     if ($null -eq $Bans) { $Bans = Get-WpaiImproveBans }
     if ($null -eq $BoostMap) { $BoostMap = Get-WpaiImproveOutcomeBoostMap }
     if ($null -eq $Stagnation) { $Stagnation = Get-WpaiImproveStagnationMap }
+    if ($null -eq $ArmStats) { $ArmStats = Get-WpaiImproveGeneArmStats }
 
     $fit = Test-WpaiImproveCodebaseFit -PathObj $PathObj
     $novelty = 0.2
@@ -1166,13 +1310,8 @@ function Get-WpaiImproveFitness {
         $learnBoost = 0.08 * $sig
     }
 
-    # Exploration bonus: genes with no outcome signal get a small lift
-    $exploreBonus = 0.0
-    if (-not $BoostMap.ContainsKey($tl)) {
-        $exploreBonus = 0.025
-    } elseif ([math]::Abs([double]$BoostMap[$tl]) -lt 0.05) {
-        $exploreBonus = 0.01
-    }
+    # UCB1 exploration (GitHub crawl mission → self-improvement): try under-pulled genes
+    $exploreBonus = Get-WpaiImproveUcb1Bonus -GeneKey $tl -ArmStats $ArmStats
 
     # Stagnation penalty: repeated leaders without strong evidence
     $stagPen = 0.0
@@ -1222,6 +1361,7 @@ function Get-WpaiImproveFitness {
         risk_penalty      = $riskPen
         learn_boost       = [math]::Round($learnBoost, 4)
         explore_bonus     = [math]::Round($exploreBonus, 4)
+        explore_method    = 'ucb1'
         stagnation_pen    = [math]::Round($stagPen, 4)
         jitter            = $jitter
         banned            = [bool]$banHit.banned
@@ -1348,6 +1488,9 @@ function Select-WpaiImproveDiverseTop {
         if (-not $bestByTarget.ContainsKey($t)) { $bestByTarget[$t] = $r }
     }
     $targetOrder = @($bestByTarget.GetEnumerator() | Sort-Object { [double]$_.Value.score } -Descending)
+    $usedLevers = @{}
+    $usedTactics = @{}
+
     foreach ($entry in $targetOrder) {
         if ($selected.Count -ge $Top) { break }
         $r = $entry.Value
@@ -1356,10 +1499,12 @@ function Select-WpaiImproveDiverseTop {
         $selected += ,$r
         $seenIds[$id] = $true
         $usedTargets[[string]$r.target] = 1
+        $usedLevers[[string]$r.lever] = 1
+        $usedTactics[[string]$r.tactic] = 1
         $usedTl["$($r.tactic)×$($r.lever)"] = 1
     }
 
-    # Phase 2: fill remaining slots — prefer new lever/tactic, hard-penalize same target overload
+    # Phase 2: fill remaining — crowding-inspired sparsity + soft penalties (NSGA-II spirit)
     while ($selected.Count -lt $Top) {
         $best = $null
         $bestAdj = [double]-999
@@ -1370,12 +1515,11 @@ function Select-WpaiImproveDiverseTop {
             $l0 = [string]$r.lever
             $tac0 = [string]$r.tactic
             $tl0 = "$tac0×$l0"
-            $bonus = 0.0
-            if (-not $usedTargets.ContainsKey($t0)) { $bonus += 0.12 }
-            elseif ([int]$usedTargets[$t0] -ge 2) { $bonus -= 0.15 }
-            elseif ([int]$usedTargets[$t0] -ge 1) { $bonus -= 0.04 }
-            if (-not $usedTl.ContainsKey($tl0)) { $bonus += 0.08 }
-            elseif ([int]$usedTl[$tl0] -ge 1) { $bonus -= 0.10 }
+            $crowd = Get-WpaiImproveCrowdingBonus -Candidate $r -UsedTargets $usedTargets `
+                -UsedLevers $usedLevers -UsedTactics $usedTactics -UsedTl $usedTl
+            $bonus = $crowd
+            if ($usedTargets.ContainsKey($t0) -and [int]$usedTargets[$t0] -ge 3) { $bonus -= 0.12 }
+            if ($usedTl.ContainsKey($tl0) -and [int]$usedTl[$tl0] -ge 2) { $bonus -= 0.10 }
             $adj = [double]$r.score + $bonus
             if ($adj -gt $bestAdj) { $bestAdj = $adj; $best = $r }
         }
@@ -1383,8 +1527,12 @@ function Select-WpaiImproveDiverseTop {
         $selected += ,$best
         $seenIds[[string]$best.id] = $true
         $t = [string]$best.target
-        $tl = "$($best.tactic)×$($best.lever)"
+        $l = [string]$best.lever
+        $tac = [string]$best.tactic
+        $tl = "$tac×$l"
         if ($usedTargets.ContainsKey($t)) { $usedTargets[$t] = [int]$usedTargets[$t] + 1 } else { $usedTargets[$t] = 1 }
+        if ($usedLevers.ContainsKey($l)) { $usedLevers[$l] = [int]$usedLevers[$l] + 1 } else { $usedLevers[$l] = 1 }
+        if ($usedTactics.ContainsKey($tac)) { $usedTactics[$tac] = [int]$usedTactics[$tac] + 1 } else { $usedTactics[$tac] = 1 }
         if ($usedTl.ContainsKey($tl)) { $usedTl[$tl] = [int]$usedTl[$tl] + 1 } else { $usedTl[$tl] = 1 }
     }
 
@@ -1411,10 +1559,11 @@ function Invoke-WpaiImproveGeneration {
     $bans = Get-WpaiImproveBans
     $boostMap = Get-WpaiImproveOutcomeBoostMap
     $stagnation = Get-WpaiImproveStagnationMap
+    $armStats = Get-WpaiImproveGeneArmStats
 
     $ranked = @()
     foreach ($p in $catalog) {
-        $ranked += Get-WpaiImproveFitness -PathObj $p -Bans $bans -BoostMap $boostMap -Stagnation $stagnation
+        $ranked += Get-WpaiImproveFitness -PathObj $p -Bans $bans -BoostMap $boostMap -Stagnation $stagnation -ArmStats $armStats
     }
     $ranked = @($ranked | Sort-Object score -Descending)
 
@@ -1780,12 +1929,25 @@ function Invoke-WpaiImproveMutate {
             $tlKey = Get-WpaiImproveGeneKey -Tactic ([string]$p.tactic) -Lever ([string]$p.lever) -Kind tactic_lever
             if ($boostMap.ContainsKey($tlKey)) { $lb = [double]$boostMap[$tlKey] * 0.12 }
         }
-        $scoredPool += [pscustomobject]@{ item = $p; adj = ([double]$p.score + $lb) }
+        $scoredPool += [pscustomobject]@{
+            id = $p.id; item = $p; score = ([double]$p.score + $lb); adj = ([double]$p.score + $lb)
+        }
     }
-    $pool = @($scoredPool | Sort-Object { [double]$_.adj } -Descending | Select-Object -First $Keep | ForEach-Object { $_.item })
+    # Hall-of-fame elitism (Packt/DEAP-style idea): always keep elite genes, tournament-select the rest
+    $eliteIds = @{}
+    foreach ($e in $eliteAsSurvivors) { if ($e.id) { $eliteIds[[string]$e.id] = $true } }
+    $eliteKeep = @($scoredPool | Where-Object { $eliteIds.ContainsKey([string]$_.id) } | Sort-Object { [double]$_.adj } -Descending)
+    $nonElite = @($scoredPool | Where-Object { -not $eliteIds.ContainsKey([string]$_.id) })
+    $rng = [System.Random]::new([int](([DateTime]::UtcNow.Ticks) % [int]::MaxValue))
+    $slotsLeft = [math]::Max(0, $Keep - $eliteKeep.Count)
+    $tourn = @()
+    if ($slotsLeft -gt 0 -and $nonElite.Count -gt 0) {
+        $tourn = @(Select-WpaiImproveTournament -Pool $nonElite -Count $slotsLeft -TournamentSize 4 -Rng $rng)
+    }
+    $pool = @($eliteKeep | ForEach-Object { $_.item }) + @($tourn | ForEach-Object { $_.item })
+    if ($pool.Count -gt $Keep) { $pool = @($pool | Select-Object -First $Keep) }
 
     $dim = Get-WpaiImproveDimensions
-    $rng = [System.Random]::new([int](([DateTime]::UtcNow.Ticks) % [int]::MaxValue))
     $lines = New-Object System.Collections.Generic.List[string]
     $seen = @{}
     $skippedBanned = 0
