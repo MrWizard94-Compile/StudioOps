@@ -1427,6 +1427,12 @@ function Invoke-WpaiImproveGeneration {
     $probeMap = @{}
     foreach ($pr in $probeResults) { $probeMap[$pr.id] = $pr }
 
+    # Outcome lookup for honest kind labels (IDEA vs PROPERTY vs SHIPPED)
+    $outById = @{}
+    foreach ($o in @(Read-WpaiImproveOutcomes)) {
+        if ($o.path_id) { $outById[[string]$o.path_id] = $o }
+    }
+
     $final = @()
     foreach ($r in $ranked) {
         $s = [double]$r.score
@@ -1438,6 +1444,33 @@ function Invoke-WpaiImproveGeneration {
             if (-not $probeOk) { $s = [math]::Round($s * 0.45, 4) }
             else { $s = [math]::Round([math]::Min(1.0, $s + 0.05), 4) }
         }
+
+        $kind = 'IDEA'
+        $kindReason = 'hypothesis only'
+        if ($outById.ContainsKey([string]$r.id)) {
+            $oo = $outById[[string]$r.id]
+            $hk = Get-WpaiImproveHypoKind -Item ([pscustomobject]@{
+                    path_id = $r.id; id = $r.id; verdict = $oo.verdict; note = $oo.note
+                    source = $oo.source
+                    artifact = $(if ($oo.PSObject.Properties.Match('artifact').Count) { $oo.artifact } else { '' })
+                    breakthrough_class = ''
+                })
+            $kind = $hk.kind
+            $kindReason = $hk.reason
+        } else {
+            $hk = Get-WpaiImproveHypoKind -Item ([pscustomobject]@{
+                    path_id = $r.id; id = $r.id; verdict = ''; note = $r.hypothesis; source = 'generation'
+                })
+            $kind = $hk.kind
+            $kindReason = $hk.reason
+        }
+
+        # Score honesty: pure ideas demote; shipped/killed properties adjust
+        if ($kind -eq 'IDEA') { $s = [math]::Round($s * 0.88, 4) }
+        elseif ($kind -eq 'PROPERTY') { $s = [math]::Round([math]::Min(1.0, $s * 0.97), 4) }
+        elseif ($kind -eq 'SHIPPED') { $s = [math]::Round([math]::Min(1.0, $s + 0.05), 4) }
+        elseif ($kind -eq 'KILLED') { $s = [math]::Round($s * 0.2, 4) }
+
         $final += [pscustomobject]@{
             id                = $r.id
             score             = $s
@@ -1463,6 +1496,8 @@ function Invoke-WpaiImproveGeneration {
             probe_ok          = $probeOk
             probe_detail      = $probeDetail
             hits              = $r.hits
+            kind              = $kind
+            kind_reason       = $kindReason
         }
     }
     $final = @($final | Sort-Object score -Descending)
@@ -1491,20 +1526,32 @@ function Invoke-WpaiImproveGeneration {
     $genPath = Join-Path $rt ($genName + '.json')
 
     $bannedInCatalog = @($final | Where-Object { $_.banned }).Count
+    $kindCounts = @{ IDEA = 0; PROPERTY = 0; SHIPPED = 0; KILLED = 0 }
+    foreach ($s in $survivors) {
+        $k = if ($s.PSObject.Properties.Match('kind').Count -and $s.kind) { [string]$s.kind } else { 'IDEA' }
+        if ($kindCounts.ContainsKey($k)) { $kindCounts[$k]++ } else { $kindCounts['IDEA']++ }
+    }
+
     $payload = [ordered]@{
-        schema_version = '1.1.0'
+        schema_version = '1.2.0'
         generation     = $genIdx
         created_at     = (Get-WpaiUtcNow)
         catalog_size   = $catalog.Count
         top            = $Top
         probed         = $Probe
         diversity      = (-not $NoDiversity)
-        philosophy     = 'diverge-hundreds → learn-bans → probe-cheap → diversity-converge → mutate'
+        philosophy     = 'diverge → learn → probe → label(IDEA/PROPERTY/SHIPPED) → diversity → mutate'
         banned_in_catalog = $bannedInCatalog
+        kind_counts    = [ordered]@{
+            IDEA     = $kindCounts['IDEA']
+            PROPERTY = $kindCounts['PROPERTY']
+            SHIPPED  = $kindCounts['SHIPPED']
+            KILLED   = $kindCounts['KILLED']
+        }
         survivors      = @($survivors)
         probed_ids     = @($toProbe | ForEach-Object { $_.id })
         all_top_scores = @($final | Select-Object -First 20 | ForEach-Object {
-                @{ id = $_.id; score = $_.score; banned = $_.banned; learn_boost = $_.learn_boost }
+                @{ id = $_.id; score = $_.score; banned = $_.banned; learn_boost = $_.learn_boost; kind = $_.kind }
             })
     }
     Write-WpaiJsonAtomic -Path $genPath -Object $payload
@@ -1515,8 +1562,12 @@ function Invoke-WpaiImproveGeneration {
     [void]$sb.AppendLine("")
     [void]$sb.AppendLine("Scored $($catalog.Count) paths · survivors $Top · probed $Probe · banned-in-catalog $bannedInCatalog · diversity=$(-not $NoDiversity)")
     [void]$sb.AppendLine("")
-    [void]$sb.AppendLine("| Rank | Score | Unconv | Learn | Stag | Target | Lever | Tactic | Hypothesis |")
-    [void]$sb.AppendLine("|-----:|------:|:------:|------:|-----:|--------|-------|--------|------------|")
+    [void]$sb.AppendLine("**Kind mix:** SHIPPED=$($kindCounts['SHIPPED']) · PROPERTY=$($kindCounts['PROPERTY']) · IDEA=$($kindCounts['IDEA']) · KILLED=$($kindCounts['KILLED'])")
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("> IDEA rows are hypotheses — not ships. Prefer SHIPPED/KILLED for decisions; use IDEA as agent backlog.")
+    [void]$sb.AppendLine("")
+    [void]$sb.AppendLine("| Rank | Kind | Score | Learn | Stag | Target | Tactic | Hypothesis |")
+    [void]$sb.AppendLine("|-----:|------|------:|------:|-----:|--------|--------|------------|")
     $rank = 0
     $scores = @($survivors | ForEach-Object { [double]$_.score })
     $scoreVar = 0.0
@@ -1526,15 +1577,15 @@ function Invoke-WpaiImproveGeneration {
     }
     foreach ($s in $survivors) {
         $rank++
-        $u = if ($s.unconventional) { 'Y' } else { '' }
         $lb = if ($null -ne $s.learn_boost) { $s.learn_boost } else { 0 }
         $sp = if ($s.PSObject.Properties.Match('stagnation_pen').Count -and $null -ne $s.stagnation_pen) { $s.stagnation_pen } else { 0 }
+        $kd = if ($s.PSObject.Properties.Match('kind').Count -and $s.kind) { [string]$s.kind } else { 'IDEA' }
         $hyp = ($s.hypothesis -replace '\|', '/')
-        if ($hyp.Length -gt 72) { $hyp = $hyp.Substring(0, 69) + '...' }
-        [void]$sb.AppendLine(("| {0} | {1} | {2} | {3} | {4} | `{5}` | {6} | {7} | {8} |" -f $rank, $s.score, $u, $lb, $sp, $s.target, $s.lever, $s.tactic, $hyp))
+        if ($hyp.Length -gt 64) { $hyp = $hyp.Substring(0, 61) + '...' }
+        [void]$sb.AppendLine(("| {0} | **{1}** | {2} | {3} | {4} | `{5}` | {6} | {7} |" -f $rank, $kd, $s.score, $lb, $sp, $s.target, $s.tactic, $hyp))
     }
     [void]$sb.AppendLine("")
-    [void]$sb.AppendLine("_v2 learning: evidence-weighted boosts, stagnation demotion, exploration bonus, score variance=$scoreVar._")
+    [void]$sb.AppendLine(('_v3: ideas demoted in score; run `wpai improve review` for unit tests + SELF-REVIEW.md. variance={0}_' -f $scoreVar))
     $utf8 = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText($leaders, $sb.ToString(), $utf8)
 
@@ -1587,7 +1638,16 @@ function Export-WpaiImproveBriefs {
     $gens = @(Get-ChildItem -LiteralPath $rt -Filter 'generation-*.json' -File -ErrorAction SilentlyContinue | Sort-Object Name -Descending)
     if ($gens.Count -eq 0) { throw 'No generation found. Run: wpai improve generation' }
     $gen = Read-WpaiJsonFile -Path $gens[0].FullName
-    $survivors = @($gen.survivors | Where-Object { -not (Test-WpaiImproveHasBannedFlag $_) } | Select-Object -First $Top)
+    # Prefer IDEA survivors — SHIPPED/PROPERTY do not need more "implement me" briefs
+    $pool = @($gen.survivors | Where-Object { -not (Test-WpaiImproveHasBannedFlag $_) })
+    $ideas = @($pool | Where-Object {
+            -not $_.PSObject.Properties.Match('kind').Count -or [string]$_.kind -eq 'IDEA' -or [string]$_.kind -eq ''
+        })
+    $survivors = @($ideas | Select-Object -First $Top)
+    if ($survivors.Count -lt $Top) {
+        $extra = @($pool | Where-Object { $_.id -notin @($survivors | ForEach-Object { $_.id }) } | Select-Object -First ($Top - $survivors.Count))
+        $survivors = @($survivors) + @($extra)
+    }
     if ($survivors.Count -eq 0) {
         $survivors = @($gen.survivors | Select-Object -First $Top)
     }
@@ -1605,14 +1665,19 @@ function Export-WpaiImproveBriefs {
         $name = 'brief-{0:D2}-{1}.md' -f $i, $s.id
         $bp = Join-Path $briefDir $name
         $lb = if ($s.PSObject.Properties['learn_boost']) { $s.learn_boost } else { 0 }
+        $kd = if ($s.PSObject.Properties.Match('kind').Count -and $s.kind) { [string]$s.kind } else { 'IDEA' }
         $banList = if ($banKeys.Count) { ($banKeys | Select-Object -First 12) -join ', ' } else { '(none)' }
         $body = @"
 # Improve Path Brief $i — $($s.id)
 
+> **KIND: $kd** — If this is IDEA, it is a hypothesis only. Do not claim a ship until code + tests exist.
+> SHIPPED elites are already done. PROPERTY is a measured invariant, not a feature request.
+
 **Generation:** $($gen.generation)  
 **Score:** $($s.score) (prior $($s.prior_score))  
 **Unconventional:** $($s.unconventional)  
-**Learn boost:** $lb
+**Learn boost:** $lb  
+**Kind:** $kd
 
 ## Hypothesis
 $($s.hypothesis)
@@ -1625,19 +1690,16 @@ $($s.hypothesis)
 - **probe:** ``$($s.probe)``
 
 ## Agent instructions
-1. Treat this as an *experiment*, not a sacred design. Implement the smallest slice that could falsify or support the hypothesis.
-2. Prefer local tests / self-check / measurement over narrative.
-3. If the path is wrong, **kill it fast**:
-   - Write ``Workspace\.wpai\improve-swarm\kills\$($s.id).md`` with why.
-   - Or: ``wpai improve record -PathId $($s.id) -Verdict KILLED -Note "..."``
-4. If the path works:
-   - Drop ``improve-swarm/experiments/$($s.id)/result.json`` with ``verdict: SUPPORTED``.
-   - Or: ``wpai improve record -PathId $($s.id) -Verdict SUPPORTED -Note "..."``
-5. Do **not** spend real money, publish, or bypass Janus validation for workload mutations.
-6. Unconventional paths are encouraged — invert assumptions when ``invert`` is set.
-7. **Do not re-try banned genes:** $banList
+1. This is an *experiment*, not a sacred design. Smallest slice that falsifies or supports.
+2. **Run real tests** for the target (``wpai.tests.ps1`` for StudioOps; project tests otherwise). File-exists is not enough.
+3. If wrong, **kill fast**: ``wpai improve record -PathId $($s.id) -Verdict KILLED -Note "..."``
+4. If it ships code: point ``artifact`` at the file path in ``result.json`` and record SUPPORTED with a metric.
+5. No money, no publish, no bypass of Janus for workload mutations.
+6. **Do not re-try banned genes:** $banList
+7. After: ``wpai improve learn`` then ``wpai improve review`` (must show SHIPPED or KILLED, not just IDEA).
 
 ## Fitness context
+- kind: $kd
 - fit: $($s.fit)
 - novelty: $($s.novelty)
 - measurable: $($s.measurable)
@@ -1645,17 +1707,14 @@ $($s.hypothesis)
 - probe_ok: $($s.probe_ok) ($($s.probe_detail))
 - hits: $($s.hits -join ', ')
 
-## After the experiment
-``wpai improve learn`` then ``wpai improve mutate`` (or ``wpai improve run``) so kills ban genes and supports boost parents.
-
 ## Spawn
-Hand this file to a subagent with write scope limited to the target area. Run many such agents in parallel on **different** path ids.
+Subagent write-scope limited to the target area. Parallel agents must use **different** path ids.
 "@
         $utf8 = New-Object System.Text.UTF8Encoding $false
         [System.IO.File]::WriteAllText($bp, $body, $utf8)
         $paths += $bp
     }
-    return [pscustomobject]@{ count = $paths.Count; paths = $paths; generation = $gen.generation }
+    return [pscustomobject]@{ count = $paths.Count; paths = $paths; generation = $gen.generation; preferred_kind = 'IDEA' }
 }
 
 # ── Mutate (ban-aware) ───────────────────────────────────────────────────────
@@ -2970,13 +3029,21 @@ function Invoke-WpaiImprovePurgeTrash {
 # ── Auto-review: ideas vs properties vs shipped ──────────────────────────────
 
 $script:WpaiImproveUnitTestCache = $null
+$script:WpaiImproveUnitTestRunning = $false
 
 function Invoke-WpaiImproveRunUnitTests {
     <#
     .SYNOPSIS
       Actually run StudioOps unit tests (cached ~10 min per process).
+      Re-entry safe: if already inside the suite, do not nest.
     #>
     param([switch]$Force)
+    if ($script:WpaiImproveUnitTestRunning -or $env:WPAI_IN_UNIT_TESTS -eq '1') {
+        return [pscustomobject]@{
+            ok = $true; exit_code = 0; ms = 0; cached = $true
+            summary = 'nested-skip (already in unit suite)'; log_tail = ''
+        }
+    }
     if (-not $Force -and $script:WpaiImproveUnitTestCache) {
         $age = ([DateTime]::UtcNow - [DateTime]$script:WpaiImproveUnitTestCache.at).TotalMinutes
         if ($age -lt 10) {
@@ -2994,20 +3061,25 @@ function Invoke-WpaiImproveRunUnitTests {
             summary = 'wpai.tests.ps1 missing'; log_tail = ''
         }
     }
-    $sw = [System.Diagnostics.Stopwatch]::StartNew()
-    $log = & pwsh -NoProfile -File $tests 2>&1 | Out-String
-    $code = $LASTEXITCODE
-    $sw.Stop()
-    $ok = ($code -eq 0) -and ($log -match 'ALL PASS')
-    $summary = if ($ok) { 'ALL PASS' } elseif ($log -match 'FAILED:\s*(\d+)') { "FAILED: $($Matches[1])" } else { "exit $code" }
-    $tail = if ($log.Length -gt 600) { $log.Substring($log.Length - 600) } else { $log }
-    $script:WpaiImproveUnitTestCache = [pscustomobject]@{
-        at = [DateTime]::UtcNow; ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds
-        summary = $summary; log_tail = $tail
-    }
-    return [pscustomobject]@{
-        ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds; cached = $false
-        summary = $summary; log_tail = $tail
+    $script:WpaiImproveUnitTestRunning = $true
+    try {
+        $sw = [System.Diagnostics.Stopwatch]::StartNew()
+        $log = & pwsh -NoProfile -File $tests 2>&1 | Out-String
+        $code = $LASTEXITCODE
+        $sw.Stop()
+        $ok = ($code -eq 0) -and ($log -match 'ALL PASS')
+        $summary = if ($ok) { 'ALL PASS' } elseif ($log -match 'FAILED:\s*(\d+)') { "FAILED: $($Matches[1])" } else { "exit $code" }
+        $tail = if ($log.Length -gt 600) { $log.Substring($log.Length - 600) } else { $log }
+        $script:WpaiImproveUnitTestCache = [pscustomobject]@{
+            at = [DateTime]::UtcNow; ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds
+            summary = $summary; log_tail = $tail
+        }
+        return [pscustomobject]@{
+            ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds; cached = $false
+            summary = $summary; log_tail = $tail
+        }
+    } finally {
+        $script:WpaiImproveUnitTestRunning = $false
     }
 }
 
@@ -3140,13 +3212,22 @@ function Invoke-WpaiImproveAutoReview {
         }
     }
 
-    $nIdea = @($rows | Where-Object { $_.kind -eq 'IDEA' }).Count
-    $nProp = @($rows | Where-Object { $_.kind -eq 'PROPERTY' }).Count
-    $nShip = @($rows | Where-Object { $_.kind -eq 'SHIPPED' }).Count
-    $nKill = @($rows | Where-Object { $_.kind -eq 'KILLED' }).Count
+    $eliteRows = @($rows | Where-Object { $_.scope -eq 'elite' })
+    $leaderRows = @($rows | Where-Object { $_.scope -eq 'leader' })
+    $nShip = @($eliteRows | Where-Object { $_.kind -eq 'SHIPPED' }).Count
+    $nProp = @($eliteRows | Where-Object { $_.kind -eq 'PROPERTY' }).Count
+    $nKill = @($eliteRows | Where-Object { $_.kind -eq 'KILLED' }).Count
+    $nIdeaElite = @($eliteRows | Where-Object { $_.kind -eq 'IDEA' }).Count
+    $nIdea = @($leaderRows | Where-Object { $_.kind -eq 'IDEA' }).Count
+    $nPropLeaders = @($leaderRows | Where-Object { $_.kind -eq 'PROPERTY' }).Count
+    $nShipLeaders = @($leaderRows | Where-Object { $_.kind -eq 'SHIPPED' }).Count
 
-    # Honest headline
-    $producing = if ($nShip -gt 0) { 'SOME shipped improvements exist' } else { 'MOSTLY ideas/properties — few or no code ships in this review set' }
+    # Honest headline (elites only for "do we have ships")
+    $producing = if ($nShip -gt 0) {
+        "SHIPPED improvements on record ($nShip); current leaders are mostly IDEA backlog ($nIdea ideas)"
+    } else {
+        'NO shipped elites — swarm is proposing ideas/properties only'
+    }
     $testsLine = if ($null -eq $testResult) {
         'Unit tests: skipped'
     } elseif ($testResult.ok) {
@@ -3165,20 +3246,29 @@ function Invoke-WpaiImproveAutoReview {
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine("**$producing**")
     [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('### Elites (proven memory)')
     [void]$sb.AppendLine("| Kind | Count | Meaning |")
     [void]$sb.AppendLine("|------|------:|---------|")
     [void]$sb.AppendLine("| SHIPPED | $nShip | Code/script landed and is attributable |")
-    [void]$sb.AppendLine("| PROPERTY | $nProp | Measured invariant (ledger, kill switch, bans) — real but not a feature |")
-    [void]$sb.AppendLine("| IDEA | $nIdea | Scored hypothesis / brief — **not yet an improvement** |")
-    [void]$sb.AppendLine("| KILLED | $nKill | Falsified — learning, not a ship |")
+    [void]$sb.AppendLine("| PROPERTY | $nProp | Measured invariant — real, not a feature ship |")
+    [void]$sb.AppendLine("| KILLED | $nKill | Falsified dead end |")
+    [void]$sb.AppendLine("| IDEA | $nIdeaElite | Should be ~0 in elites |")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('### Current leaders (this generation)')
+    [void]$sb.AppendLine("| Kind | Count | Meaning |")
+    [void]$sb.AppendLine("|------|------:|---------|")
+    [void]$sb.AppendLine("| IDEA | $nIdea | **Hypotheses — not improvements yet** |")
+    [void]$sb.AppendLine("| PROPERTY | $nPropLeaders | Re-validated invariants |")
+    [void]$sb.AppendLine("| SHIPPED | $nShipLeaders | Already-shipped genes still ranking |")
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine("### $testsLine")
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('### What the swarm does **not** do by default')
     [void]$sb.AppendLine('1. It does **not** implement every high-score hypothesis as a PR.')
-    [void]$sb.AppendLine('2. `probe=unit-test` used to mean "test file exists"; it now runs `wpai.tests.ps1` (this review).')
+    [void]$sb.AppendLine('2. Generation **demotes IDEA scores** so raw novelty does not outrank shipped learning.')
     [void]$sb.AppendLine('3. Auto-experiments mostly verify **control-plane properties**, not product features.')
     [void]$sb.AppendLine('4. Agents/humans still micro-implement non-self targets from briefs.')
+    [void]$sb.AppendLine('5. `wpai improve review` runs real unit tests; treat FAIL as a blocker.')
     [void]$sb.AppendLine('')
     [void]$sb.AppendLine('## Elites')
     [void]$sb.AppendLine('')
@@ -3235,6 +3325,8 @@ function Invoke-WpaiImproveAutoReview {
         property       = $nProp
         idea           = $nIdea
         killed         = $nKill
+        idea_leaders   = $nIdea
+        shipped_elites = $nShip
         unit_tests_ok  = $(if ($testResult) { [bool]$testResult.ok } else { $null })
         unit_tests_ms  = $(if ($testResult) { $testResult.ms } else { 0 })
         producing      = $producing
@@ -3248,15 +3340,36 @@ function Test-WpaiImproveReliability {
       Gate: self-improvement system is reliable enough to trust for another wave.
     #>
     $issues = New-Object System.Collections.Generic.List[string]
-    $outcomes = @(Read-WpaiImproveOutcomes)
+
+    # Auto-strip unit-test / selfcheck pollution before judging (tests leave residue)
+    $rawOutcomes = @(Read-WpaiImproveOutcomes)
+    $pollution = @($rawOutcomes | Where-Object {
+            [string]$_.path_id -match 'testban|selftest|autochk|bancheck|relcheck' -or [string]$_.source -in @('unit-test', 'auto-selfcheck')
+        })
+    if ($pollution.Count -gt 0 -and -not $script:WpaiImproveUnitTestRunning -and $env:WPAI_IN_UNIT_TESTS -ne '1') {
+        $keep = @($rawOutcomes | Where-Object {
+                [string]$_.path_id -notmatch 'testban|selftest|autochk|bancheck|relcheck' -and [string]$_.source -notin @('unit-test', 'auto-selfcheck')
+            })
+        $path = Get-WpaiImproveOutcomesPath
+        $utf8 = New-Object System.Text.UTF8Encoding $false
+        $lines = @()
+        foreach ($o in $keep) {
+            $h = [ordered]@{}
+            foreach ($prop in $o.PSObject.Properties) { $h[$prop.Name] = $prop.Value }
+            $lines += ($h | ConvertTo-Json -Compress -Depth 8)
+        }
+        [System.IO.File]::WriteAllLines($path, $lines, $utf8)
+        $outcomes = $keep
+    } else {
+        $outcomes = $rawOutcomes
+        if ($pollution.Count -gt 0) {
+            # Inside unit suite: report but do not rewrite mid-test
+            $issues.Add("pollution outcomes=$($pollution.Count) (expected during unit suite)")
+        }
+    }
+
     $bans = Get-WpaiImproveBans
     $elites = Get-WpaiImproveElites
-
-    # No test pollution in ledger
-    $pollution = @($outcomes | Where-Object {
-            [string]$_.path_id -match 'testban|selftest|autochk|bancheck' -or [string]$_.source -in @('unit-test', 'auto-selfcheck')
-        })
-    if ($pollution.Count -gt 0) { $issues.Add("pollution outcomes=$($pollution.Count)") }
 
     # No empty-gene bans
     foreach ($b in @($bans.bans)) {
@@ -3325,6 +3438,20 @@ function Test-WpaiImproveReliability {
     if ($uniqueSupportGenes -gt 0 -and $uniqueKillGenes -eq 0) { $issues.Add('no kill genes retained') }
     if ($k -lt 1) { $issues.Add('no kills retained — lost falsification memory') }
 
+    # Unit tests + honest review (skip nested suite if already inside tests)
+    $review = $null
+    $testsOk = $null
+    try {
+        $review = Invoke-WpaiImproveAutoReview -TopLeaders 8 -SkipTests:$script:WpaiImproveUnitTestRunning
+        if (-not $script:WpaiImproveUnitTestRunning) {
+            $testsOk = $review.unit_tests_ok
+            if ($testsOk -eq $false) { $issues.Add('unit tests FAIL — improve system not reliable') }
+        }
+        if ($review.shipped -lt 1) { $issues.Add('no SHIPPED elites — only ideas/properties') }
+    } catch {
+        $issues.Add("auto-review failed: $($_.Exception.Message)")
+    }
+
     $ok = ($issues.Count -eq 0)
     $meta = $null
     try { $meta = Write-WpaiImproveMetaReport } catch { }
@@ -3340,6 +3467,10 @@ function Test-WpaiImproveReliability {
         support_pct   = [math]::Round($supportPct, 1)
         fail_closed   = $fc.verdict
         diversity_ok  = ($targets.Count -ge 2)
+        unit_tests_ok = $testsOk
+        shipped       = $(if ($review) { $review.shipped } else { $null })
+        idea_leaders  = $(if ($review) { $review.idea } else { $null })
+        review_path   = $(if ($review) { $review.path } else { $null })
         meta_path     = $(if ($meta) { $meta.path } else { $null })
     }
 }

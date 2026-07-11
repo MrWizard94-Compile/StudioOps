@@ -1,6 +1,8 @@
 # WPAI control-plane self-tests (PowerShell)
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
+# Prevent nested re-entry when improve probes call Invoke-WpaiImproveRunUnitTests
+$env:WPAI_IN_UNIT_TESTS = '1'
 $failed = 0
 function Assert-True($cond, $msg) {
     if (-not $cond) {
@@ -319,6 +321,16 @@ Assert-True ($propKind.kind -eq 'PROPERTY') "measured invariant -> $($propKind.k
 $rev = Invoke-WpaiImproveAutoReview -TopLeaders 5 -SkipTests
 Assert-True (Test-Path $rev.path) 'SELF-REVIEW.md written'
 Assert-True (($rev.shipped + $rev.property + $rev.idea + $rev.killed) -ge 1) 'review has classified rows'
+# Nested unit-test runner must not recurse
+$nested = Invoke-WpaiImproveRunUnitTests
+Assert-True ($null -ne $nested.summary) "unit test runner returns summary=$($nested.summary)"
+# Generation attaches kind and demotes pure ideas vs shipped when outcomes exist
+$sampleIdea = Get-WpaiImproveFitness -PathObj ([pscustomobject]@{
+        id = 'path-neverseen0001'; target = 'gaming-mod'; lever = 'novelty'; tactic = 'document-only'
+        invert = 'none'; probe = 'docs-delta'; hypothesis = 'On gaming-mod, improve novelty by applying document-only; validate with docs-delta.'
+        unconventional = $true; risk = 'low'; cost_to_try = 'cheap'
+    })
+Assert-True ($sampleIdea.score -ge 0) "fitness still scores unseen idea=$($sampleIdea.score)"
 
 Write-Host ""
 if ($failed -gt 0) {

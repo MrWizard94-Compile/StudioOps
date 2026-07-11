@@ -718,8 +718,10 @@ switch ($cmd) {
         } elseif ($sub -eq 'doctor' -or $sub -eq 'reliability') {
             $r = Test-WpaiImproveReliability
             if ($r.ok) {
-                Write-Host ("RELIABLE: outcomes={0} elites={1} bans={2} kills={3} support={4}% fail-closed={5}" -f `
-                    $r.outcomes, $r.elites, $r.bans, $r.kills, $r.support_pct, $r.fail_closed) -ForegroundColor Green
+                $tc = if ($r.unit_tests_ok -eq $true) { 'PASS' } elseif ($r.unit_tests_ok -eq $false) { 'FAIL' } else { 'n/a' }
+                Write-Host ("RELIABLE: outcomes={0} elites={1} bans={2} kills={3} shipped={4} tests={5}" -f `
+                    $r.outcomes, $r.elites, $r.bans, $r.kills, $r.shipped, $tc) -ForegroundColor Green
+                if ($r.review_path) { Write-Host ("review: {0}" -f $r.review_path) }
             } else {
                 Write-Host ("NOT RELIABLE: outcomes={0} elites={1} bans={2}" -f $r.outcomes, $r.elites, $r.bans) -ForegroundColor Red
                 foreach ($iss in $r.issues) { Write-Host ("  - {0}" -f $iss) -ForegroundColor Red }
