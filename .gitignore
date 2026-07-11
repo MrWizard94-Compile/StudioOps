@@ -1,0 +1,36 @@
+# Build / pack outputs
+dist/
+*.zip
+*.log
+
+# OS / editor
+Thumbs.db
+Desktop.ini
+.DS_Store
+*.swp
+*~
+.vscode/
+.idea/
+
+# Local env / secrets (never commit)
+.env
+.env.*
+*.pem
+*keys*
+*secret*
+
+# Runtime mirrors (live state lives under Workspace\.wpai / .hellforge)
+.wpai/
+
+# Asset optimize backups / probe blobs
+**/_pre-optimize-bak/
+**/imgprobe.bin
+airo-site/dist/
+
+# Node if ever added
+node_modules/
+
+# Python
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,77 @@
+{
+  "hero": {
+    "headline_start": "Forging the future of",
+    "headline_accent": "creative media",
+    "lede": "One restless studio. Heavy music, developer tools, games, and deep research — shipped under one brand, directed by human hands, powered by modern tooling.",
+    "thesis": "AI is in the name. The wizard is in the work.",
+    "badge": "Human-directed · AI-assisted",
+    "cta_primary": "Shop the storefront",
+    "cta_primary_url": "https://wpaistudio.gumroad.com",
+    "cta_secondary": "See what's live"
+  },
+  "products": {
+    "section_label": "What's for sale right now",
+    "items": [
+      {
+        "id": "repoforge-pro",
+        "name": "RepoForge Pro",
+        "price": "$14",
+        "category": "Software",
+        "description": "One-command Python project bootstrapper: virtual env, curated dependencies by project type, git, GitHub remote, tests, and hooks. The \"ml-experiment\" profile scaffolds experiment and claims registries with falsification discipline.",
+        "buy_label": "Buy RepoForge Pro",
+        "buy_url": "https://wpaistudio.gumroad.com/l/repoforge",
+        "free_label": "Free Lite on GitHub",
+        "free_url": "https://github.com/MrWizard94-Compile/repoforge"
+      },
+      {
+        "id": "mixin-field-manual",
+        "name": "The Mixin Field Manual",
+        "price": "$29",
+        "category": "Modding",
+        "description": "Cross-mod compatibility guide for Minecraft Forge & NeoForge: how mixins actually apply when 300 mods share a method — priorities, merges, and war stories from shipped Valkyrien Skies × Immersive Portals work.",
+        "buy_label": "Buy the Manual",
+        "buy_url": "https://wpaistudio.gumroad.com/l/mixin-field-manual",
+        "free_label": "Free sample chapter",
+        "free_url": "https://wpaistudio.gumroad.com/l/mixin-sample"
+      }
+    ]
+  },
+  "studio": {
+    "section_label": "The studio",
+    "headline": "Music funds the rest",
+    "lanes": [
+      {
+        "id": "music",
+        "name": "Music",
+        "description": "Heavy rock, metal, and country crossover under the WPAI name. Flagship thesis track: \"Weaponized Mind.\" Distribution in motion.",
+        "status": "Distribution in motion"
+      },
+      {
+        "id": "software",
+        "name": "Software",
+        "description": "RepoForge, the Mixin Field Manual, HellForge (a studio terminal), and internal tooling. Distribution-first: finished work goes on sale.",
+        "status": "Shipping now"
+      },
+      {
+        "id": "games",
+        "name": "Games & Research",
+        "description": "Minecraft mod work (including an Astral Sorcery port) and long-horizon AI research. Audience and IP first, cash later.",
+        "status": "Building audience"
+      }
+    ]
+  },
+  "about": {
+    "section_label": "The wizard is in the work",
+    "body": "Wizard Productions AI Studio is what happens when one restless, weaponized mind stops asking permission. Founder Rob Bulkley (Mrwizard94) is AuADHD/ODD and treats it as an arsenal: intense interest in music, graphics, games, software, and deep AI research — and the modern tooling to run them as one studio. The AI collaboration is in the company name, disclosed on every release, and never apologized for. What can't be generated is the part WPAI actually sells: the ideas, the direction, the taste, the hours, and the hands-on finish on every track, tool, and graphic.",
+    "closing": "Nothing ships untouched."
+  },
+  "contact": {
+    "section_label": "Contact",
+    "headline": "Write the studio",
+    "email": "rob@wpaistudio.net",
+    "storefront": "wpaistudio.gumroad.com",
+    "github": "github.com/MrWizard94-Compile",
+    "cta_label": "Write the studio",
+    "cta_url": "mailto:rob@wpaistudio.net"
+  }
+}

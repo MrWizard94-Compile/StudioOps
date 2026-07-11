@@ -1,0 +1,13 @@
+{
+  "schema_version": "1.0.0",
+  "kind": "janus_job",
+  "workload": "astral-sorcery-port",
+  "validation_profile": "forge-mod-v1",
+  "objective": "Example only — do not submit without Director arm",
+  "files_in_scope": ["src/main/java/hellfirepvp/astralsorcery/AstralSorcery.java"],
+  "constraints": ["no SuppressWarnings", "zero warnings", "Forge 1.20.1 only"],
+  "acceptance_criteria": ["gradlew build exits 0", "validation receipt written"],
+  "patch_mode": "manual",
+  "parent_task_id": null,
+  "context_refs": ["doc:claude"]
+}

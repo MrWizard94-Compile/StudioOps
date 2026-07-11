@@ -1,0 +1,70 @@
+:root {
+    /* Core Colors */
+    --background: 15 25% 3%;
+    --foreground: 0 0% 96%;
+    --card: 30 13% 6%;
+    --card-foreground: 32 46% 93%;
+    --popover: 15 25% 3%;
+    --popover-foreground: 0 0% 96%;
+    --primary: 23 100% 57%;
+    --primary-foreground: 0 0% 100%;
+    --secondary: 53 100% 57%;
+    --secondary-foreground: 0 0% 39%;
+    --muted: 23 18% 9%;
+    --muted-foreground: 24 19% 58%;
+    --accent: 12 82% 51%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    --border: 23 27% 13%;
+    --input: 23 27% 13%;
+    --ring: 23 100% 57%;
+
+    /* Extended Colors */
+    --chart-1: 23 100% 87%;
+    --chart-2: 23 100% 72%;
+    --chart-3: 23 100% 57%;
+    --chart-4: 23 100% 42%;
+    --chart-5: 23 100% 27%;
+
+    /* Sidebar Colors */
+    --sidebar: 23 18% 9%;
+    --sidebar-foreground: 0 0% 96%;
+    --sidebar-primary: 23 100% 57%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 12 82% 51%;
+    --sidebar-accent-foreground: 0 0% 100%;
+    --sidebar-border: 23 27% 13%;
+    --sidebar-ring: 23 100% 57%;
+
+    /* Typography */
+    --font-sans: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+    --font-heading: "Cinzel", Georgia, serif;
+    --font-serif: ui-serif, Georgia, "Times New Roman", serif;
+    --font-mono: ui-monospace, "SF Mono", Monaco, "Cascadia Code", "Roboto Mono", Consolas, "Courier New", monospace;
+
+    /* Border Radius */
+    --radius: 0.5rem;
+    /* Button radius: the kit's radiusButton is written here at install time;
+       the default matches shadcn `rounded-md` (calc(var(--radius) - 2px)) so a
+       kit without a button radius renders unchanged. Consumed by the Button
+       `cva` via `rounded-[var(--radius-button)]` (AIROBUILD-3249). */
+    --radius-button: calc(var(--radius) - 2px);
+
+    /* Shadows */
+    --shadow-2xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-xs: 0 1px 3px 0px hsl(0 0% 0% / 0.05);
+    --shadow-sm: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 1px 2px -1px hsl(0 0% 0% / 0.10);
+    --shadow-md: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 2px 4px -1px hsl(0 0% 0% / 0.10);
+    --shadow-lg: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 4px 6px -1px hsl(0 0% 0% / 0.10);
+    --shadow-xl: 0 1px 3px 0px hsl(0 0% 0% / 0.10), 0 8px 10px -1px hsl(0 0% 0% / 0.10);
+    --shadow-2xl: 0 1px 3px 0px hsl(0 0% 0% / 0.25);
+  }
+
+*{
+  border-color: hsl(var(--border));
+}
+
+body{
+  background-color:

@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <script type="module">import { injectIntoGlobalHook } from "/@react-refresh";
+injectIntoGlobalHook(window);
+window.$RefreshReg$ = () => {};
+window.$RefreshSig$ = () => (type) => type;</script>
+
+    <script type="module" src="/@vite/client"></script>
+
+    <meta charset="UTF-8" />
+    <script>
+      (function () {
+        try {
+          var u = new URL(location.href);
+          if (u.searchParams.has('airoShareToken')) {
+            u.searchParams.delete('airoShareToken');
+            history.replaceState(null, '', u.toString());
+          }
+        } catch (e) {}
+      })();
+    </script>
+    <meta name="referrer" content="same-origin" />
+    <link rel="icon" href="/favicon.ico" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!--app-head-->
+    <script src="/airo-video-slots.js"></script>
+    <script src="/airo-logo-orientation.js"></script>
+  </head>
+  <body class="fs-unmask-airo-app-builder">
+    <div id="app" class="fs-unmask-airo-app-builder"><!--app-html--></div>
+    <script type="module" src="/index.html?html-proxy&index=0.js"></script>
+    <script src="/analytics.js"></script>
+  </body>
+</html>

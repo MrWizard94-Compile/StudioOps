@@ -1,0 +1,187 @@
+{
+  "meta": {
+    "title": "Studio — Wizard Productions AI Studio",
+    "description": "Three lanes, one studio. WPAI makes heavy music, developer tools, and games & research — all human-directed, AI-assisted, and built to ship."
+  },
+  "hero": {
+    "label": "The studio",
+    "headline": "Three lanes. One forge.",
+    "lede": "Music funds the rest. Software ships now. Games and research build the long game. Every lane feeds the others."
+  },
+  "lanes": [
+    {
+      "id": "lane-music",
+      "slug": "music",
+      "number": "01",
+      "label": "Lane one",
+      "name": "Music",
+      "tagline": "Heavy, honest, and finished.",
+      "description": "WPAI makes heavy music — metal, industrial, and experimental adjacent. Every track is written, produced, and mixed in-house. AI handles drafts and arrangement experiments; the final sound is directed and signed off by a human ear. Nothing ships that doesn't hit.",
+      "detail": "The music lane is the oldest part of the studio and the financial foundation. Releases go on Bandcamp and streaming. Licensing is open to sync and placement inquiries. The catalog grows slowly because quality gates are real.",
+      "status": "Active — releasing",
+      "links": [
+        {
+          "id": "link-music-2",
+          "label": "Storefront",
+          "url": "https://wpaistudio.gumroad.com"
+        }
+      ],
+      "attributes": [
+        {
+          "id": "attr-music-1",
+          "key": "Genre",
+          "value": "Heavy / Industrial / Experimental"
+        },
+        {
+          "id": "attr-music-2",
+          "key": "Production",
+          "value": "In-house, AI-assisted"
+        },
+        {
+          "id": "attr-music-3",
+          "key": "Distribution",
+          "value": "Streaming"
+        },
+        {
+          "id": "attr-music-4",
+          "key": "Licensing",
+          "value": "Sync inquiries open"
+        }
+      ]
+    },
+    {
+      "id": "lane-software",
+      "slug": "software",
+      "number": "02",
+      "label": "Lane two",
+      "name": "Software",
+      "tagline": "Tools I built for myself. Now on sale.",
+      "description": "Every tool in the software lane started as something I needed and couldn't find. RepoForge Pro bootstraps Python projects the right way. The Mixin Field Manual documents what actually happens when 300 mods share a method. Both are finished, documented, and on the storefront.",
+      "detail": "The software lane ships developer tools, technical guides, and utilities. The bar is: does it solve a real problem, is it done, and is the documentation honest? If yes, it ships. The free tiers exist because I believe in letting people evaluate before they pay.",
+      "status": "Active — 2 products live",
+      "links": [
+        {
+          "id": "link-sw-1",
+          "label": "RepoForge Pro",
+          "url": "https://wpaistudio.gumroad.com/l/repoforge"
+        },
+        {
+          "id": "link-sw-2",
+          "label": "Mixin Field Manual",
+          "url": "https://wpaistudio.gumroad.com/l/mixin-field-manual"
+        },
+        {
+          "id": "link-sw-3",
+          "label": "GitHub",
+          "url": "https://github.com/MrWizard94-Compile"
+        }
+      ],
+      "attributes": [
+        {
+          "id": "attr-sw-1",
+          "key": "Current products",
+          "value": "2 live on Gumroad"
+        },
+        {
+          "id": "attr-sw-2",
+          "key": "Stack",
+          "value": "Python, Java / Kotlin (Forge/NeoForge)"
+        },
+        {
+          "id": "attr-sw-3",
+          "key": "Free tiers",
+          "value": "Available on all products"
+        },
+        {
+          "id": "attr-sw-4",
+          "key": "Open source",
+          "value": "Core tools on GitHub"
+        }
+      ]
+    },
+    {
+      "id": "lane-games",
+      "slug": "games-research",
+      "number": "03",
+      "label": "Lane three",
+      "name": "Games & Research",
+      "tagline": "Long-horizon bets. Building in public.",
+      "description": "Games and research are the long game. Minecraft modding work (Valkyrien Skies × Immersive Portals compatibility) is already shipped and documented. Original game projects and AI research are in active development — building audience and IP for the next phase of the studio.",
+      "detail": "The research side focuses on ML epistemology and falsification discipline — the same rigor that goes into the ml-experiment profile in RepoForge. The games side is original IP, not ports or clones. Both lanes build slowly and ship when they're done.",
+      "status": "In development",
+      "links": [
+        {
+          "id": "link-gr-1",
+          "label": "GitHub",
+          "url": "https://github.com/MrWizard94-Compile"
+        },
+        {
+          "id": "link-gr-2",
+          "label": "Storefront",
+          "url": "https://wpaistudio.gumroad.com"
+        }
+      ],
+      "attributes": [
+        {
+          "id": "attr-gr-1",
+          "key": "Modding",
+          "value": "Forge / NeoForge compatibility"
+        },
+        {
+          "id": "attr-gr-2",
+          "key": "Research",
+          "value": "ML epistemology, falsification"
+        },
+        {
+          "id": "attr-gr-3",
+          "key": "Games",
+          "value": "Original IP in development"
+        },
+        {
+          "id": "attr-gr-4",
+          "key": "Timeline",
+          "value": "Long-horizon — ships when done"
+        }
+      ]
+    }
+  ],
+  "how": {
+    "section_label": "How the studio works",
+    "headline": "One person. Three lanes. Everything ships.",
+    "body": "WPAI is a one-person studio. That means every decision — creative direction, quality gate, release timing, pricing — is made by one person with full context and no committee. It also means the output is slower than a team and more coherent than most. The neurodivergence is the engine: hyperfocus on one lane at a time, pattern recognition across all three, and an allergy to shipping things that aren't done.",
+    "steps": [
+      {
+        "id": "step-1",
+        "number": "01",
+        "title": "Build for real problems",
+        "body": "Every product starts as something I needed. If I had to solve it, someone else does too."
+      },
+      {
+        "id": "step-2",
+        "number": "02",
+        "title": "Finish before shipping",
+        "body": "Nothing goes on the storefront half-done. The quality gate is real and it's mine."
+      },
+      {
+        "id": "step-3",
+        "number": "03",
+        "title": "Disclose the AI",
+        "body": "AI involvement is visible on every release. The collaboration is open. The human authorship is real."
+      },
+      {
+        "id": "step-4",
+        "number": "04",
+        "title": "Let the work compound",
+        "body": "Music funds software. Software funds research. Research feeds everything. The lanes aren't separate — they're one system."
+      }
+    ]
+  },
+  "cta": {
+    "headline": "See what's on the storefront",
+    "body": "All three lanes ship to one place. Browse the current catalog.",
+    "primary_label": "Visit the storefront",
+    "primary_url": "https://wpaistudio.gumroad.com",
+    "secondary_label": "See the products",
+    "secondary_url": "/products"
+  }
+}

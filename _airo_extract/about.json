@@ -1,0 +1,62 @@
+{
+  "meta": {
+    "title": "About — Wizard Productions AI Studio",
+    "description": "Rob Bulkley (Mrwizard94) built WPAI as a one-person studio where AuADHD and ODD are assets, not obstacles. The AI collaboration is in the name — the wizard is in the work."
+  },
+  "hero": {
+    "label": "About WPAI",
+    "headline": "One restless mind. One studio.",
+    "subheadline": "Built to ship — not to ask permission."
+  },
+  "founder": {
+    "section_label": "The founder",
+    "name": "Rob Bulkley",
+    "handle": "Mrwizard94",
+    "intro": "I'm Rob Bulkley — Mrwizard94 online. I built Wizard Productions AI Studio because I needed a place where every obsession I have could become a product.",
+    "body_1": "I'm AuADHD and ODD. I spent years being told those were problems to manage. They're not. Hyperfocus is a superpower when you point it at something real. Pattern recognition across wildly different domains — music theory, compiler behavior, mod loader internals, machine learning epistemology — is exactly what makes WPAI work. The neurodivergence isn't a liability I work around. It's the engine.",
+    "body_2": "WPAI started as a way to stop letting finished work rot on a hard drive. Every tool I built for myself, every guide I wrote to solve a problem nobody else had documented, every track I finished — it all goes on the storefront. Distribution-first means the work has to be done before it ships. Nothing half-finished.",
+    "body_3": "The studio runs on three lanes: Music, Software, and Games & Research. Music funds the rest. Software ships now. Games and research build the long-term audience and IP. All three feed each other."
+  },
+  "philosophy": {
+    "section_label": "Brand philosophy",
+    "headline": "What WPAI actually is",
+    "pillars": [
+      {
+        "id": "pillar-distribution",
+        "title": "Distribution-first",
+        "body": "Finished work goes on sale. Not \"eventually\" — immediately. If it solves a real problem and it's done, it ships. The storefront is the proof of work."
+      },
+      {
+        "id": "pillar-neurodivergent",
+        "title": "Neurodivergent as arsenal",
+        "body": "AuADHD and ODD aren't obstacles to route around. Hyperfocus, pattern recognition across domains, and an allergy to arbitrary authority are features. WPAI is built on them."
+      },
+      {
+        "id": "pillar-taste",
+        "title": "Taste over trend",
+        "body": "Heavy music, deep technical writing, and long-horizon research don't chase the algorithm. WPAI makes things that are worth making — and trusts that the right audience finds them."
+      },
+      {
+        "id": "pillar-finish",
+        "title": "Nothing ships untouched",
+        "body": "Every track, tool, and graphic is directed, finished, and signed off by a human. The studio name is on it. That means something."
+      }
+    ]
+  },
+  "ai_statement": {
+    "section_label": "AI transparency",
+    "headline": "AI is in the name. Here's what that means.",
+    "body_1": "WPAI uses AI tools in production. That's not a footnote — it's in the company name. Every release is made in open collaboration with AI: code generation, lyric drafts, graphic concepts, research synthesis.",
+    "body_2": "What AI doesn't provide: the ideas, the direction, the taste, the hours, the judgment calls, and the hands-on finish on every release. Those are mine. The AI is a tool. The wizard is the one using it.",
+    "body_3": "I disclose AI involvement on every release because I think the industry's default of hiding it is dishonest. WPAI's position is the opposite: the collaboration is visible, the human authorship is real, and the work stands on its own.",
+    "closing": "AI is in the name. The wizard is in the work."
+  },
+  "cta": {
+    "headline": "See what's shipping",
+    "body": "Everything WPAI makes goes on the storefront. Browse the current catalog.",
+    "primary_label": "Shop the storefront",
+    "primary_url": "https://wpaistudio.gumroad.com",
+    "secondary_label": "See the products",
+    "secondary_url": "/products"
+  }
+}

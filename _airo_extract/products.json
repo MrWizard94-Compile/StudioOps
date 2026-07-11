@@ -1,0 +1,105 @@
+{
+  "meta": {
+    "title": "Products — Wizard Productions AI Studio",
+    "description": "RepoForge Pro and The Mixin Field Manual — developer tools and modding guides forged and shipped by WPAI."
+  },
+  "hero": {
+    "label": "Products",
+    "headline": "Forged tools. Real work.",
+    "lede": "Two products on sale today. More in the forge. Everything ships finished."
+  },
+  "repoforge": {
+    "name": "RepoForge Pro",
+    "tagline": "Bootstrap Python projects the right way — once.",
+    "price": "$14",
+    "category": "Developer Software",
+    "buy_label": "Buy RepoForge Pro — $14",
+    "buy_url": "https://wpaistudio.gumroad.com/l/repoforge",
+    "free_label": "Free Lite version on GitHub",
+    "free_url": "https://github.com/MrWizard94-Compile/repoforge",
+    "description": "One command. A complete, opinionated Python project — virtual environment, curated dependencies by project type, git init, GitHub remote creation, test scaffolding, and pre-commit hooks. Stop copy-pasting setup boilerplate across every new project.",
+    "highlight": "The \"ml-experiment\" profile scaffolds experiment and claims registries with falsification discipline baked in — not bolted on.",
+    "features": [
+      {
+        "id": "feat-rf-1",
+        "title": "Project type profiles",
+        "body": "Choose from ml-experiment, web-api, cli-tool, data-pipeline, and more. Each profile installs the right dependencies and wires the right structure."
+      },
+      {
+        "id": "feat-rf-2",
+        "title": "GitHub remote in one step",
+        "body": "Authenticates with GitHub and creates the remote automatically. No manual repo creation, no copy-pasting SSH keys mid-setup."
+      },
+      {
+        "id": "feat-rf-3",
+        "title": "Pre-commit hooks included",
+        "body": "Black, isort, flake8, and mypy wired up before you write a single line. Code quality from commit one."
+      },
+      {
+        "id": "feat-rf-4",
+        "title": "Test scaffolding",
+        "body": "pytest configured with sensible defaults, a tests/ directory, and a passing smoke test so CI starts green."
+      },
+      {
+        "id": "feat-rf-5",
+        "title": "ML falsification discipline",
+        "body": "The ml-experiment profile adds experiment registries and claims tracking — so your research stays honest and reproducible."
+      },
+      {
+        "id": "feat-rf-6",
+        "title": "Free Lite on GitHub",
+        "body": "Core bootstrapping is open source. Pro adds the full profile library, GitHub remote automation, and priority updates."
+      }
+    ]
+  },
+  "mixin": {
+    "name": "The Mixin Field Manual",
+    "tagline": "What actually happens when 300 mods share a method.",
+    "price": "$29",
+    "category": "Modding Guide",
+    "buy_label": "Buy the Manual — $29",
+    "buy_url": "https://wpaistudio.gumroad.com/l/mixin-field-manual",
+    "free_label": "Free sample chapter",
+    "free_url": "https://wpaistudio.gumroad.com/l/mixin-sample",
+    "description": "Cross-mod compatibility for Minecraft Forge and NeoForge, written from the trenches. Not a tutorial — a field manual for developers who've already read the docs and still can't figure out why their mixin is losing.",
+    "highlight": "War stories from shipped Valkyrien Skies × Immersive Portals compatibility work — real conflicts, real fixes, real priority decisions.",
+    "features": [
+      {
+        "id": "feat-mx-1",
+        "title": "Mixin priority deep dive",
+        "body": "How @Inject, @Overwrite, and @Redirect interact when multiple mods target the same method — and how to win without breaking everyone else."
+      },
+      {
+        "id": "feat-mx-2",
+        "title": "Merge strategies",
+        "body": "When mixins compose cleanly, when they silently corrupt each other, and the patterns that make the difference."
+      },
+      {
+        "id": "feat-mx-3",
+        "title": "Forge vs NeoForge differences",
+        "body": "The loader divergence matters for mixin behavior. Covers both, flags the gotchas, and explains which patterns are safe on each."
+      },
+      {
+        "id": "feat-mx-4",
+        "title": "Real shipped examples",
+        "body": "Valkyrien Skies × Immersive Portals compatibility work dissected — the actual conflicts, the actual fixes, and why each decision was made."
+      },
+      {
+        "id": "feat-mx-5",
+        "title": "Debugging playbook",
+        "body": "A systematic approach to diagnosing mixin failures: log reading, conflict isolation, and the tools that actually help."
+      },
+      {
+        "id": "feat-mx-6",
+        "title": "Free sample chapter",
+        "body": "Read the priority system chapter before you buy. If it doesn't teach you something, the full manual probably isn't for you."
+      }
+    ]
+  },
+  "cta": {
+    "headline": "Everything on the storefront",
+    "body": "Both products live on Gumroad. Pay once, download immediately, updates included.",
+    "label": "Visit the storefront",
+    "url": "https://wpaistudio.gumroad.com"
+  }
+}
