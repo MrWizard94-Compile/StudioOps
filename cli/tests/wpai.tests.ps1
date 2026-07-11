@@ -19,6 +19,7 @@ $cli = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 . (Join-Path $cli 'lib\WpaiOvernight.ps1')
 . (Join-Path $cli 'lib\WpaiResearch.ps1')
 . (Join-Path $cli 'lib\WpaiBudgetLedger.ps1')
+. (Join-Path $cli 'lib\WpaiBlackboardVerify.ps1')
 
 # Install / defaults
 $r = Ensure-WpaiRuntime
@@ -52,6 +53,17 @@ $jobs | Wait-Job | Out-Null
 $jobs | Remove-Job
 $bb = Get-WpaiBlackboard
 Assert-True ($bb.generation -ge $g2) 'post-concurrent generation ok'
+
+# Gen3 #1: BLACKBOARD shape + falsify stress (guess-then-falsify)
+$shape = Test-WpaiBlackboardShape -Blackboard (Get-WpaiBlackboard)
+Assert-True $shape.ok ("blackboard shape ok issues=$($shape.issues -join ';')")
+$falsify = Invoke-WpaiBlackboardFalsify -Workers 6 -PerWorker 3
+Assert-True $falsify.ok ("falsify stress: $($falsify.verdict) issues=$($falsify.issues -join ';')")
+Assert-True ($falsify.static_score -ge 1.0) "falsify static_score=$($falsify.static_score)"
+Assert-True $falsify.kill_research_held 'kill_switch.research held under concurrency'
+$doc = Invoke-WpaiBlackboardDoctor -DoRepair -DoFalsify:$false
+Assert-True $doc.ok 'board doctor shape-only ok'
+Assert-True ($null -eq $doc.falsify) 'shape-only doctor skips falsify'
 
 # Cost model additive
 $c = Get-WpaiCostEstimate -Rounds 1 -ExecutorInvocations 2

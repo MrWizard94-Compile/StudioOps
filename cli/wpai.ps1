@@ -24,6 +24,8 @@ param(
     [switch]$Submit,
     [switch]$Force,
     [switch]$WhatIf,
+    [switch]$Repair,
+    [switch]$Falsify,
     [string]$Release,
     [string]$Job,
     [string]$ParentTaskIds,
@@ -54,6 +56,9 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'lib\WpaiOvernight.ps1')
 . (Join-Path $here 'lib\WpaiResearch.ps1')
 . (Join-Path $here 'lib\WpaiImproveSwarm.ps1')
+. (Join-Path $here 'lib\WpaiBlackboardVerify.ps1')
+if (Test-Path (Join-Path $here 'lib\WpaiBudgetLedger.ps1')) { . (Join-Path $here 'lib\WpaiBudgetLedger.ps1') }
+if (Test-Path (Join-Path $here 'lib\WpaiObserve.ps1')) { . (Join-Path $here 'lib\WpaiObserve.ps1') }
 . (Join-Path $here 'lib\WpaiBudgetLedger.ps1')
 . (Join-Path $here 'lib\WpaiObserve.ps1')
 
@@ -93,6 +98,7 @@ WPAI control plane (on-demand)
     wpai status
     wpai board
     wpai board set-goal "text"
+    wpai board verify [-Repair] [-Falsify]   # gen3 #1 integrity (guess-then-falsify)
     wpai kill set <global|loops|research|publishes> <true|false>
     wpai kill status
     wpai budget status
@@ -231,6 +237,13 @@ switch ($cmd) {
                 $bb['director_goal'] = $goal
             } | Out-Null
             Write-Host "Goal set: $goal" -ForegroundColor Green
+        } elseif ($sub -eq 'verify' -or $sub -eq 'doctor') {
+            $doRepair = [bool]$Repair -or [bool]$Force -or $map.ContainsKey('Repair')
+            $doFalsify = [bool]$Falsify -or $map.ContainsKey('Falsify')
+            if ($sub -eq 'doctor') { $doRepair = $true; $doFalsify = $true }
+            $r = Invoke-WpaiBlackboardDoctor -DoRepair:$doRepair -DoFalsify:$doFalsify
+            $r | ConvertTo-Json -Depth 10
+            if (-not $r.ok) { exit 1 }
         } else {
             Get-WpaiBlackboard | ConvertTo-Json -Depth 12
         }

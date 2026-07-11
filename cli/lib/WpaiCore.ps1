@@ -328,6 +328,21 @@ function Invoke-WpaiBlackboardRmw {
 
             & $Mutator $bb
 
+            # Normalize critical collections after mutator (never allow null events/approvals)
+            if ($null -eq $bb['events'] -or $bb['events'] -is [string]) {
+                $bb['events'] = @()
+            }
+            if ($null -eq $bb['approvals_pending']) {
+                $bb['approvals_pending'] = @()
+            }
+            if ($bb['kill_switch'] -is [System.Collections.IDictionary]) {
+                foreach ($kk in @('global', 'loops', 'research', 'publishes')) {
+                    if (-not $bb['kill_switch'].Contains($kk) -or $null -eq $bb['kill_switch'][$kk]) {
+                        $bb['kill_switch'][$kk] = $false
+                    }
+                }
+            }
+
             # Re-read generation for optimistic concurrency (belt + suspenders with lock)
             $disk2 = Read-WpaiJsonFile -Path $path
             $genNow = 0
@@ -377,16 +392,16 @@ function Add-WpaiEvent {
         actor    = $Actor
         refs     = $Refs
     }
-    $events = @()
-    if ($Blackboard['events'] -is [System.Collections.IEnumerable] -and -not ($Blackboard['events'] -is [string])) {
-        foreach ($e in $Blackboard['events']) { $events += ,$e }
+    $events = [System.Collections.Generic.List[object]]::new()
+    if ($null -ne $Blackboard['events'] -and $Blackboard['events'] -is [System.Collections.IEnumerable] -and -not ($Blackboard['events'] -is [string])) {
+        foreach ($e in $Blackboard['events']) {
+            if ($null -ne $e) { $events.Add($e) }
+        }
     }
-    $events += ,$ev
+    $events.Add($ev)
     # ring cap 200
-    if ($events.Count -gt 200) {
-        $events = $events[($events.Count - 200)..($events.Count - 1)]
-    }
-    $Blackboard['events'] = $events
+    while ($events.Count -gt 200) { [void]$events.RemoveAt(0) }
+    $Blackboard['events'] = @($events)
 }
 
 function Test-WpaiKillActive {

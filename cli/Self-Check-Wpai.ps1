@@ -25,6 +25,10 @@ Step 'hf-bus tests' {
 Step 'status' {
     & pwsh -NoProfile -File (Join-Path $cli 'wpai.ps1') status | Out-Null
 }
+Step 'board verify+falsify' {
+    & pwsh -NoProfile -File (Join-Path $cli 'wpai.ps1') board doctor
+    if ($LASTEXITCODE -ne 0) { throw "board doctor exit $LASTEXITCODE" }
+}
 Step 'music check' {
     & pwsh -NoProfile -File (Join-Path $cli 'wpai.ps1') music check
     if ($LASTEXITCODE -ne 0) { throw "music check failed" }
