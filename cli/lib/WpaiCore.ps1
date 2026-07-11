@@ -235,65 +235,119 @@ function ConvertTo-WpaiHashtable {
     return $Object
 }
 
+function Enter-WpaiBlackboardLock {
+    param([int]$TimeoutMs = 8000)
+    Ensure-WpaiRuntime | Out-Null
+    $lockPath = Join-Path $script:WpaiDir 'BLACKBOARD.lock'
+    $deadline = [DateTime]::UtcNow.AddMilliseconds($TimeoutMs)
+    while ([DateTime]::UtcNow -lt $deadline) {
+        try {
+            # Exclusive create — fails if another process holds the lock file
+            $fs = [System.IO.File]::Open(
+                $lockPath,
+                [System.IO.FileMode]::CreateNew,
+                [System.IO.FileAccess]::Write,
+                [System.IO.FileShare]::None
+            )
+            $bytes = [System.Text.Encoding]::UTF8.GetBytes(("{0} {1}" -f $PID, (Get-WpaiUtcNow)))
+            $fs.Write($bytes, 0, $bytes.Length)
+            return $fs
+        } catch {
+            Start-Sleep -Milliseconds (40 + (Get-Random -Maximum 80))
+            # Stale lock recovery: if lock file older than 60s, delete and retry
+            try {
+                if (Test-Path -LiteralPath $lockPath) {
+                    $age = (Get-Date) - (Get-Item -LiteralPath $lockPath).LastWriteTime
+                    if ($age.TotalSeconds -gt 60) {
+                        Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
+                    }
+                }
+            } catch { }
+        }
+    }
+    throw "BLACKBOARD lock timeout after ${TimeoutMs}ms ($lockPath)"
+}
+
+function Exit-WpaiBlackboardLock {
+    param($FileStream)
+    $lockPath = Join-Path $script:WpaiDir 'BLACKBOARD.lock'
+    try {
+        if ($null -ne $FileStream) {
+            $FileStream.Close()
+            $FileStream.Dispose()
+        }
+    } catch { }
+    try {
+        if (Test-Path -LiteralPath $lockPath) {
+            Remove-Item -LiteralPath $lockPath -Force -ErrorAction SilentlyContinue
+        }
+    } catch { }
+}
+
 function Invoke-WpaiBlackboardRmw {
     <#
     .SYNOPSIS
-      Atomic single-writer RMW on BLACKBOARD.json with generation retries.
+      Atomic single-writer RMW on BLACKBOARD.json with file lock + generation retries.
     .PARAMETER Mutator
       ScriptBlock receiving hashtable blackboard; mutates in place; returns nothing.
     #>
     param(
         [Parameter(Mandatory)][scriptblock]$Mutator,
-        [int]$MaxRetries = 5
+        [int]$MaxRetries = 8
     )
     Ensure-WpaiRuntime | Out-Null
     $path = $script:WpaiBlackboardPath
-    $attempt = 0
-    while ($attempt -lt $MaxRetries) {
-        $attempt++
-        $disk = Read-WpaiJsonFile -Path $path
-        if ($null -eq $disk) {
-            $disk = Get-WpaiDefaultBlackboard | ConvertTo-Json -Depth 20 | ConvertFrom-Json
-        }
-        $genBefore = 0
-        try { $genBefore = [int]$disk.generation } catch { $genBefore = 0 }
-        $bb = ConvertTo-WpaiHashtable $disk
-        if ($null -eq $bb) { $bb = Get-WpaiDefaultBlackboard }
-
-        # Roll day/month counters if period changed
-        $today = (Get-Date).ToString('yyyy-MM-dd')
-        $month = (Get-Date).ToString('yyyy-MM')
-        if ($bb['budgets'] -is [System.Collections.IDictionary]) {
-            if ([string]$bb['budgets']['period_day'] -ne $today) {
-                $bb['budgets']['period_day'] = $today
-                $bb['budgets']['api_usd_spent_est_day'] = 0.0
-                $bb['budgets']['executor_invocations_day'] = 0
+    $lock = Enter-WpaiBlackboardLock
+    try {
+        $attempt = 0
+        while ($attempt -lt $MaxRetries) {
+            $attempt++
+            $disk = Read-WpaiJsonFile -Path $path
+            if ($null -eq $disk) {
+                $disk = Get-WpaiDefaultBlackboard | ConvertTo-Json -Depth 20 | ConvertFrom-Json
             }
-            if ([string]$bb['budgets']['period_month'] -ne $month) {
-                $bb['budgets']['period_month'] = $month
-                $bb['budgets']['api_usd_spent_est_month'] = 0.0
+            $genBefore = 0
+            try { $genBefore = [int]$disk.generation } catch { $genBefore = 0 }
+            $bb = ConvertTo-WpaiHashtable $disk
+            if ($null -eq $bb) { $bb = Get-WpaiDefaultBlackboard }
+
+            # Roll day/month counters if period changed
+            $today = (Get-Date).ToString('yyyy-MM-dd')
+            $month = (Get-Date).ToString('yyyy-MM')
+            if ($bb['budgets'] -is [System.Collections.IDictionary]) {
+                if ([string]$bb['budgets']['period_day'] -ne $today) {
+                    $bb['budgets']['period_day'] = $today
+                    $bb['budgets']['api_usd_spent_est_day'] = 0.0
+                    $bb['budgets']['executor_invocations_day'] = 0
+                }
+                if ([string]$bb['budgets']['period_month'] -ne $month) {
+                    $bb['budgets']['period_month'] = $month
+                    $bb['budgets']['api_usd_spent_est_month'] = 0.0
+                }
             }
-        }
 
-        & $Mutator $bb
+            & $Mutator $bb
 
-        # Re-read generation for optimistic concurrency
-        $disk2 = Read-WpaiJsonFile -Path $path
-        $genNow = 0
-        if ($null -ne $disk2) {
-            try { $genNow = [int]$disk2.generation } catch { $genNow = 0 }
-        }
-        if ($genNow -ne $genBefore -and $attempt -lt $MaxRetries) {
-            Start-Sleep -Milliseconds (50 * $attempt)
-            continue
-        }
+            # Re-read generation for optimistic concurrency (belt + suspenders with lock)
+            $disk2 = Read-WpaiJsonFile -Path $path
+            $genNow = 0
+            if ($null -ne $disk2) {
+                try { $genNow = [int]$disk2.generation } catch { $genNow = 0 }
+            }
+            if ($genNow -ne $genBefore -and $attempt -lt $MaxRetries) {
+                Start-Sleep -Milliseconds (30 * $attempt)
+                continue
+            }
 
-        $bb['generation'] = $genBefore + 1
-        $bb['updated_at'] = Get-WpaiUtcNow
-        Write-WpaiJsonAtomic -Path $path -Object $bb
-        return $bb
+            $bb['generation'] = $genBefore + 1
+            $bb['updated_at'] = Get-WpaiUtcNow
+            Write-WpaiJsonAtomic -Path $path -Object $bb
+            return $bb
+        }
+        throw "BLACKBOARD RMW failed after $MaxRetries retries (generation conflict)."
+    } finally {
+        Exit-WpaiBlackboardLock -FileStream $lock
     }
-    throw "BLACKBOARD RMW failed after $MaxRetries retries (generation conflict)."
 }
 
 function Get-WpaiBlackboard {
@@ -394,9 +448,29 @@ function New-WpaiApprovalTicket {
         [string]$ParentTaskId = '',
         [string[]]$Paths = @(),
         [hashtable]$Payload = @{},
-        [int]$ExpiresHours = 168
+        [int]$ExpiresHours = 168,
+        [switch]$AllowDuplicate
     )
     Ensure-WpaiRuntime | Out-Null
+    # Dedupe: reuse pending ticket of same kind+summary (or music release name)
+    if (-not $AllowDuplicate) {
+        $pending = @(Get-WpaiApprovalTickets -Status 'pending')
+        $releaseKey = $null
+        if ($Payload -and $Payload.ContainsKey('release_name')) { $releaseKey = [string]$Payload['release_name'] }
+        foreach ($p in $pending) {
+            if ([string]$p.kind -ne $Kind) { continue }
+            $sameSummary = [string]$p.summary -eq $Summary
+            $sameRelease = $false
+            if ($releaseKey -and $p.ticket -and $p.ticket.payload) {
+                try {
+                    $sameRelease = [string]$p.ticket.payload.release_name -eq $releaseKey
+                } catch { }
+            }
+            if ($sameSummary -or $sameRelease) {
+                return [pscustomobject]@{ Ticket = $p.ticket; Path = $p.path; Deduped = $true }
+            }
+        }
+    }
     $id = 'appr-' + (New-WpaiId)
     $now = Get-Date
     $ticket = [ordered]@{
@@ -432,7 +506,7 @@ function New-WpaiApprovalTicket {
                 -From $RequestedBy -To 'director' -Path $path -Id $id | Out-Null
         }
     } catch { }
-    return [pscustomobject]@{ Ticket = $ticket; Path = $path }
+    return [pscustomobject]@{ Ticket = $ticket; Path = $path; Deduped = $false }
 }
 
 function Get-WpaiApprovalTickets {

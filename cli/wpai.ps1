@@ -212,16 +212,39 @@ switch ($cmd) {
             $bb = Get-WpaiBlackboard
             $bb.kill_switch | ConvertTo-Json
         } elseif ($sub -eq 'set') {
-            $which = if ($pos.Count -ge 1) { $pos[0] } elseif ($map.ContainsKey('Which')) { $map['Which'] } else { throw 'kill set <name> <true|false>' }
-            $valRaw = if ($pos.Count -ge 2) { $pos[1] } elseif ($map.ContainsKey('Value')) { $map['Value'] } else { throw 'value true|false required' }
-            $val = [System.Convert]::ToBoolean($valRaw)
-            $which = $which.ToLowerInvariant()
+            # Collect free words from pos and Rest (pwsh may bind "true" oddly)
+            $words = [System.Collections.Generic.List[string]]::new()
+            foreach ($w in @($pos)) { if ($null -ne $w -and [string]$w -ne '') { $words.Add([string]$w) } }
+            foreach ($w in @($Rest)) {
+                if ($null -eq $w) { continue }
+                $s = [string]$w
+                if ($s -match '^-') { continue }
+                $words.Add($s)
+            }
+            if ($words.Count -lt 2 -and $map.ContainsKey('Which') -and $map.ContainsKey('Value')) {
+                $words.Clear()
+                $words.Add([string]$map['Which'])
+                $words.Add([string]$map['Value'])
+            }
+            if ($words.Count -lt 2) { throw 'kill set <name> <true|false>' }
+            $which = $words[0].ToLowerInvariant()
+            $valRaw = $words[1]
+            # Accept True/False/1/0/yes/no
+            $val = $false
+            if ($valRaw -match '^(true|1|yes|on)$') { $val = $true }
+            elseif ($valRaw -match '^(false|0|no|off)$') { $val = $false }
+            else {
+                try { $val = [System.Convert]::ToBoolean($valRaw) } catch { throw "value true|false required, got: $valRaw" }
+            }
             if ($which -notin @('global', 'loops', 'research', 'publishes')) { throw "unknown kill key: $which" }
             Invoke-WpaiBlackboardRmw -Mutator {
                 param($bb)
                 $bb['kill_switch'][$which] = $val
                 Add-WpaiEvent -Blackboard $bb -Kind 'kill' -StepKey ("kill.{0}.{1}" -f $which, $val) -Actor 'director'
             } | Out-Null
+            try {
+                Write-WpaiBusMessage -Text ("kill $which=$val") -Type 'kill' -From 'director' -To 'all' | Out-Null
+            } catch { }
             Write-Host ("kill_switch.{0} = {1}" -f $which, $val) -ForegroundColor Yellow
         } else { throw "unknown kill sub: $sub" }
         break

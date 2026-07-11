@@ -110,12 +110,19 @@ $long = 'x' * 450
 $m = New-HfBusMessage -Text $long -Type 'status' -From 'director' -To 'all'
 Assert-True ($m.text.Length -le 400) "non-chat truncate len=$($m.text.Length)"
 
-# Bus approve_request on ticket
-$beforeBus = (Get-Item (Get-WpaiBusPath)).Length
-$t2 = New-WpaiApprovalTicket -Kind 'generic' -Summary 'bus notify test ticket'
+# Bus approve_request on ticket (unique summary avoids dedupe)
+$beforeBus = 0
+try { $beforeBus = (Get-Item (Get-WpaiBusPath)).Length } catch { $beforeBus = 0 }
+$unique = 'bus notify test ' + [guid]::NewGuid().ToString('N').Substring(0, 8)
+$t2 = New-WpaiApprovalTicket -Kind 'generic' -Summary $unique -AllowDuplicate
 Assert-True (Test-Path $t2.Path) 'ticket2 written'
 $afterBus = (Get-Item (Get-WpaiBusPath)).Length
 Assert-True ($afterBus -gt $beforeBus) 'bus grew after approve_request'
+# Dedupe: second identical music-style ticket returns same path
+$d1 = New-WpaiApprovalTicket -Kind 'music_publish' -Summary 'dedupe-me' -Payload @{ release_name = 'DedupeTrack' }
+$d2 = New-WpaiApprovalTicket -Kind 'music_publish' -Summary 'dedupe-me' -Payload @{ release_name = 'DedupeTrack' }
+Assert-True ($d2.Deduped -eq $true) 'second ticket deduped'
+Assert-True ($d1.Ticket.id -eq $d2.Ticket.id) 'dedupe reuses ticket id'
 
 # Research gate refuses when dormant
 $gate = Test-WpaiResearchAllowed
