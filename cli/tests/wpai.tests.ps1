@@ -285,7 +285,11 @@ Assert-True ($qcPass.ok -and $qcPass.cases_checked -eq 20) "quickcheck passes tr
 $qcFail = Invoke-WpaiImproveQuickCheck -Cases 64 -Seed 1 -Generator { param($rng) $rng.Next(0, 2) } -Property { param($n) $n -eq 0 }
 Assert-True ((-not $qcFail.ok) -and ($qcFail.counterexample -eq 1)) "quickcheck falsifies + counterexample=$($qcFail.counterexample)"
 
-# property-test tactic now runs real randomized ban-robustness falsification (measured)
+# Core-invariant property suite: ban-robust + fitness-bounds + fitness-deterministic + genekey-stable
+$props = Invoke-WpaiImproveProperties -Cases 15 -Seed 3
+Assert-True ($props.all_ok -and $props.checked -eq 4) "property suite: $($props.checked) invariants held across $($props.total_cases) cases"
+
+# property-test tactic now runs the full randomized invariant suite (measured)
 $fakeProp = [pscustomobject]@{
     id = 'path-selftest0002'; target = 'improve-swarm'; lever = 'reliability'; tactic = 'property-test'
     invert = 'none'; probe = 'property-quick'

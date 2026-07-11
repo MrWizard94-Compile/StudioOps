@@ -2533,6 +2533,82 @@ function Invoke-WpaiImproveQuickCheck {
     }
 }
 
+function Invoke-WpaiImproveProperties {
+    <#
+    .SYNOPSIS
+      Run the swarm's core invariants as property-based falsification checks (via QuickCheck).
+      Each returns held/falsified + first counterexample. Real falsification of the control plane,
+      not presence checks. Used by the property-test tactic and available standalone.
+    #>
+    param([int]$Cases = 25, [int]$Seed = 0)
+    $results = @()
+
+    # P1: raise-context×latency ban holds for ANY field permutation (banned AND score < 0.15)
+    $results += [pscustomobject]@{ name = 'ban-robust'; r = (Invoke-WpaiImproveQuickCheck -Cases $Cases -Seed $Seed -Generator {
+                param($rng)
+                $inv = @('none', 'invert-assumption', 'guess-then-falsify', 'measure-then-guess', 'do-opposite')
+                $pr = @('static-score', 'dry-run-script', 'unit-test', 'micro-bench', 'schema-validate')
+                $rk = @('low', 'med', 'high')
+                [pscustomobject]@{
+                    id = 'path-prop' + $rng.Next(100000, 999999); target = 'janus-loop'; lever = 'latency'; tactic = 'raise-context'
+                    invert = $inv[$rng.Next($inv.Count)]; probe = $pr[$rng.Next($pr.Count)]; hypothesis = 'ban'
+                    unconventional = ($rng.Next(2) -eq 1); risk = $rk[$rng.Next($rk.Count)]; cost_to_try = 'cheap'
+                }
+            } -Property {
+                param($c) $f = Get-WpaiImproveFitness -PathObj $c; ($f.banned -and $f.score -lt 0.15)
+            }) }
+
+    # P2: fitness score is always within [0,1] for any gene
+    $results += [pscustomobject]@{ name = 'fitness-bounds'; r = (Invoke-WpaiImproveQuickCheck -Cases $Cases -Seed ($Seed + 1) -Generator {
+                param($rng)
+                $t = @('improve-swarm', 'studioops-cli', 'overnight', 'token-budget', 'janus-loop', 'hellforge-bus')
+                $l = @('latency', 'reliability', 'dx', 'throughput', 'determinism', 'idempotency', 'novelty')
+                $tc = @('measurement-first', 'fail-closed', 'double-entry', 'chaos-inject', 'cache', 'batch', 'snapshot', 'remove-feature', 'raise-context')
+                $iv = @('none', 'invert-assumption', 'do-opposite')
+                [pscustomobject]@{
+                    id = 'path-prop' + $rng.Next(100000, 999999); target = $t[$rng.Next($t.Count)]; lever = $l[$rng.Next($l.Count)]; tactic = $tc[$rng.Next($tc.Count)]
+                    invert = $iv[$rng.Next($iv.Count)]; probe = 'static-score'; hypothesis = 'bounds'
+                    unconventional = ($rng.Next(2) -eq 1); risk = 'low'; cost_to_try = 'cheap'
+                }
+            } -Property {
+                param($c) $f = Get-WpaiImproveFitness -PathObj $c; ($f.score -ge 0.0 -and $f.score -le 1.0)
+            }) }
+
+    # P3: fitness is deterministic (same gene evaluated twice -> identical score)
+    $results += [pscustomobject]@{ name = 'fitness-deterministic'; r = (Invoke-WpaiImproveQuickCheck -Cases $Cases -Seed ($Seed + 2) -Generator {
+                param($rng)
+                $t = @('improve-swarm', 'studioops-cli', 'overnight'); $l = @('latency', 'reliability', 'dx'); $tc = @('measurement-first', 'fail-closed', 'cache')
+                [pscustomobject]@{
+                    id = 'path-prop' + $rng.Next(100000, 999999); target = $t[$rng.Next($t.Count)]; lever = $l[$rng.Next($l.Count)]; tactic = $tc[$rng.Next($tc.Count)]
+                    invert = 'none'; probe = 'static-score'; hypothesis = 'det'; unconventional = $false; risk = 'low'; cost_to_try = 'cheap'
+                }
+            } -Property {
+                param($c) (Get-WpaiImproveFitness -PathObj $c).score -eq (Get-WpaiImproveFitness -PathObj $c).score
+            }) }
+
+    # P4: gene key is stable for the same tactic×lever (the ban system depends on this)
+    $results += [pscustomobject]@{ name = 'genekey-stable'; r = (Invoke-WpaiImproveQuickCheck -Cases $Cases -Seed ($Seed + 3) -Generator {
+                param($rng)
+                $tc = @('cache', 'fail-closed', 'raise-context', 'batch', 'snapshot'); $l = @('latency', 'reliability', 'dx', 'throughput')
+                [pscustomobject]@{ tactic = $tc[$rng.Next($tc.Count)]; lever = $l[$rng.Next($l.Count)] }
+            } -Property {
+                param($c)
+                $k1 = Get-WpaiImproveGeneKey -Tactic $c.tactic -Lever $c.lever -Kind tactic_lever
+                $k2 = Get-WpaiImproveGeneKey -Tactic $c.tactic -Lever $c.lever -Kind tactic_lever
+                ($k1 -eq $k2 -and [string]$k1 -ne '')
+            }) }
+
+    $failed = @($results | Where-Object { -not $_.r.ok } | ForEach-Object { $_.name })
+    $totalCases = (@($results | ForEach-Object { $_.r.cases_checked }) | Measure-Object -Sum).Sum
+    return [pscustomobject]@{
+        all_ok      = ($failed.Count -eq 0)
+        checked     = $results.Count
+        total_cases = [int]$totalCases
+        failed      = $failed
+        results     = $results
+    }
+}
+
 function Invoke-WpaiImproveAutoExperiment {
     <#
     .SYNOPSIS
@@ -2668,44 +2744,25 @@ function Invoke-WpaiImproveAutoExperiment {
                 }
                 'fail-closed|property-test|test-only' {
                     if ($tactic -eq 'property-test') {
-                        # Real randomized falsification (ported QuickCheck/Hypothesis algorithm):
-                        # the raise-context×latency ban must hold for ANY field permutation, not one case.
+                        # Real randomized falsification of the control plane's core invariants
+                        # (ported QuickCheck/Hypothesis algorithm) — not a presence check.
                         $banActive = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency'
                         if (-not $banActive.banned) {
                             $verdict = 'INCONCLUSIVE'; $tier = 'weak'
-                            $note = 'raise-context×latency not currently banned — property N/A this run'
+                            $note = 'raise-context×latency not currently banned — ban-robust property N/A this run'
                         } else {
-                            $qc = Invoke-WpaiImproveQuickCheck -Cases 30 -Generator {
-                                param($rng)
-                                $inverts = @('none', 'invert-assumption', 'guess-then-falsify', 'measure-then-guess', 'do-opposite')
-                                $probes = @('static-score', 'dry-run-script', 'unit-test', 'micro-bench', 'schema-validate')
-                                $risks = @('low', 'med', 'high')
-                                $costs = @('cheap', 'med', 'expensive')
-                                [pscustomobject]@{
-                                    id             = 'path-prop' + $rng.Next(100000, 999999)
-                                    target         = 'janus-loop'; lever = 'latency'; tactic = 'raise-context'
-                                    invert         = $inverts[$rng.Next($inverts.Count)]
-                                    probe          = $probes[$rng.Next($probes.Count)]
-                                    hypothesis     = 'property ban-robustness'
-                                    unconventional = ($rng.Next(2) -eq 1)
-                                    risk           = $risks[$rng.Next($risks.Count)]
-                                    cost_to_try    = $costs[$rng.Next($costs.Count)]
-                                }
-                            } -Property {
-                                param($case)
-                                $f = Get-WpaiImproveFitness -PathObj $case
-                                return ($f.banned -and $f.score -lt 0.15)
-                            }
-                            $metrics['property'] = 'raise-context×latency ban robust to field permutations'
-                            $metrics['cases_checked'] = $qc.cases_checked
-                            $metrics['qc_ok'] = $qc.ok
-                            if ($qc.ok) {
+                            $pr = Invoke-WpaiImproveProperties -Cases 25
+                            $metrics['properties_checked'] = $pr.checked
+                            $metrics['property_cases'] = $pr.total_cases
+                            $metrics['properties_failed'] = ($pr.failed -join ',')
+                            if ($pr.all_ok) {
                                 $verdict = 'SUPPORTED'; $tier = 'measured'
-                                $note = "property held: ban robust across $($qc.cases_checked) random permutations"
+                                $note = "$($pr.checked) invariants held across $($pr.total_cases) random cases"
                             } else {
-                                $ce = $qc.counterexample
+                                $failName = $pr.failed[0]
+                                $ce = (@($pr.results | Where-Object { $_.name -eq $failName })[0]).r.counterexample
                                 $verdict = 'KILLED'; $tier = 'strong'
-                                $note = "property FALSIFIED: ban leaked (invert=$($ce.invert) probe=$($ce.probe) risk=$($ce.risk))"
+                                $note = "property FALSIFIED: $failName ce=$(($ce | ConvertTo-Json -Compress -Depth 3))"
                             }
                         }
                     } else {
@@ -3745,13 +3802,22 @@ function Invoke-WpaiImproveUnleash {
         [int]$Inject = 60,
         [int]$ExtraMutants = 50,
         [int]$Briefs = 8,
-        [switch]$SelfOnlyAuto
+        [switch]$SelfOnlyAuto,
+        [switch]$NoEarlyStop,
+        [int]$StaleWavesToStop = 2
     )
     if ($Waves -lt 1) { $Waves = 1 }
     if ($Waves -gt 8) { $Waves = 8 } # hard cap: local only but avoid runaway
+    if ($StaleWavesToStop -lt 1) { $StaleWavesToStop = 1 }
 
     $waveReports = @()
     $t0 = [DateTime]::UtcNow
+    # Self-play discipline: stop when the loop stops learning (no new measured support and no
+    # elite growth for N consecutive waves) instead of blindly burning every wave.
+    $staleCount = 0
+    $prevElites = -1
+    $earlyStopped = $false
+    $earlyStopReason = ''
 
     for ($w = 1; $w -le $Waves; $w++) {
         $wStart = [DateTime]::UtcNow
@@ -3762,6 +3828,13 @@ function Invoke-WpaiImproveUnleash {
         $auto = Invoke-WpaiImproveAutoWave -Limit $AutoLimit -SelfOnly:$SelfOnlyAuto
         $learn2 = Invoke-WpaiImproveLearn
         $elite2 = Update-WpaiImproveEliteArchive
+        $newMeasured = @($auto.results | Where-Object {
+                $_.verdict -eq 'SUPPORTED' -and ([string]$_.evidence_tier -eq 'measured') -and
+                -not ($_.PSObject.Properties.Match('skipped').Count -gt 0 -and [bool]$_.skipped)
+            }).Count
+        $eliteGrew = ($prevElites -ge 0 -and $elite2.count -gt $prevElites)
+        if ($newMeasured -eq 0 -and -not $eliteGrew) { $staleCount++ } else { $staleCount = 0 }
+        $prevElites = $elite2.count
         $mut = $null
         if ($w -lt $Waves) {
             $mut = Invoke-WpaiImproveMutate -Keep $Keep -Inject $Inject
@@ -3794,6 +3867,8 @@ function Invoke-WpaiImproveUnleash {
             outcomes_total  = $learn2.outcomes_total
             bans_total      = $learn2.bans_total
             elites_total    = $elite2.count
+            new_measured    = $newMeasured
+            stale_count     = $staleCount
             elapsed_sec     = [math]::Round(([DateTime]::UtcNow - $wStart).TotalSeconds, 2)
             auto_results    = @($auto.results | ForEach-Object {
                     @{
@@ -3816,6 +3891,12 @@ function Invoke-WpaiImproveUnleash {
                 }
             } | Out-Null
         } catch { }
+
+        if (-not $NoEarlyStop -and $staleCount -ge $StaleWavesToStop -and $w -lt $Waves) {
+            $earlyStopped = $true
+            $earlyStopReason = "stale $staleCount wave(s): no new measured support or elite growth"
+            break
+        }
     }
 
     $rt = Get-WpaiImproveRuntimeDir
@@ -3881,6 +3962,8 @@ function Invoke-WpaiImproveUnleash {
             outcomes_total     = $wr.outcomes_total
             bans_total         = $wr.bans_total
             elites_total       = $wr.elites_total
+            new_measured       = $wr.new_measured
+            stale_count        = $wr.stale_count
             elapsed_sec        = $wr.elapsed_sec
             auto_results       = @($wr.auto_results)
         }
@@ -3890,6 +3973,8 @@ function Invoke-WpaiImproveUnleash {
             schema_version = '1.0.0'
             finished_at    = (Get-WpaiUtcNow)
             waves          = $Waves
+            waves_run      = $reportsArr.Count
+            early_stopped  = $earlyStopped
             wall_sec       = [math]::Round(([DateTime]::UtcNow - $t0).TotalSeconds, 2)
             reports        = $jsonReports
         })
@@ -3916,5 +4001,8 @@ function Invoke-WpaiImproveUnleash {
         final_generation = $last.generation
         total_supported  = $sumSupported
         total_killed     = $sumKilled
+        waves_run        = $reportsArr.Count
+        early_stopped    = $earlyStopped
+        stop_reason      = $earlyStopReason
     }
 }
