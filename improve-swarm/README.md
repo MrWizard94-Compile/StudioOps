@@ -119,6 +119,21 @@ wpai improve doctor    # must print RELIABLE before trusting the swarm
 
 See **`BREAKTHROUGHS.md`** for the curated ship list (raise-context kill, blackboard doctor, overnight dry-gate, etc.). Elites are **one per breakthrough class**, not every auto-probe echo.
 
+## Auto-review (ideas vs real improvements)
+
+```powershell
+wpai improve review    # runs unit tests + classifies elites/leaders → SELF-REVIEW.md
+```
+
+| Label | Meaning |
+|-------|---------|
+| **SHIPPED** | Attributable code/script landed (blackboard doctor, dry-then-arm, …) |
+| **PROPERTY** | Measured invariant (ledger balanced, kill switch) — real, not a feature ship |
+| **IDEA** | Scored hypothesis / leader — **not yet an improvement** |
+| **KILLED** | Falsified dead end |
+
+Most of a generation’s leaders are **IDEA**. That is expected: the swarm proposes; ships need micro-impl + tests. Unleash ends with a review summary.
+
 ## Learning rules
 
 1. **Kills** under `kills/path-….md` → outcome `KILLED`.
