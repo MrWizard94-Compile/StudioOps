@@ -20,6 +20,7 @@ $cli = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 . (Join-Path $cli 'lib\WpaiResearch.ps1')
 . (Join-Path $cli 'lib\WpaiBudgetLedger.ps1')
 . (Join-Path $cli 'lib\WpaiBlackboardVerify.ps1')
+. (Join-Path $cli 'lib\WpaiImproveSwarm.ps1')
 
 # Install / defaults
 $r = Ensure-WpaiRuntime
@@ -191,6 +192,72 @@ Assert-True ($sum.ledger_lines -ge 2) 'ledger has legs'
 Assert-True ($null -ne $sum.day_cap_usd) 'ledger summary day cap'
 $bal = Test-WpaiBudgetLedgerBalance
 Assert-True ($bal.ok -eq $true) "ledger balanced ($($bal.reason) entries=$($bal.entries))"
+
+# ── Improve swarm: learning, bans, diversity, fitness feedback ───────────────
+$geneTl = Get-WpaiImproveGeneKey -Tactic 'raise-context' -Lever 'latency' -Kind tactic_lever
+Assert-True ($geneTl -eq 'raise-context×latency') "gene key tactic_lever=$geneTl"
+
+$rec = Write-WpaiImproveOutcome -PathId 'path-testban0001' -Verdict 'KILLED' -Source 'unit-test' `
+    -Note 'unit-test kill for raise-context×latency' `
+    -Target 'janus-loop' -Lever 'latency' -Tactic 'raise-context' -Invert 'none' -Probe 'static-score' -Force
+Assert-True ($rec.appended -eq $true) 'outcome append for test kill'
+Assert-True ($rec.gene_tactic_lever -eq 'raise-context×latency') 'outcome gene_tactic_lever'
+
+$learn = Invoke-WpaiImproveLearn -SkipIngest
+Assert-True ($learn.bans_total -ge 1) "learn bans_total=$($learn.bans_total)"
+Assert-True (Test-Path $learn.bans_path) 'bans.json exists'
+Assert-True (Test-Path $learn.learning_path) 'LEARNING.md exists'
+
+$banHit = Test-WpaiImproveGeneBanned -Target 'janus-loop' -Lever 'latency' -Tactic 'raise-context' -Invert 'none' -Probe 'static-score'
+Assert-True ($banHit.banned -eq $true) 'raise-context×latency is banned after learn'
+
+$alive = Test-WpaiImproveGeneBanned -Target 'overnight' -Lever 'reliability' -Tactic 'chaos-inject' -Invert 'none' -Probe 'schema-validate'
+# may or may not be banned depending on ledger; just ensure call works
+Assert-True ($null -ne $alive.banned) 'ban check returns banned flag'
+
+$fakePath = [pscustomobject]@{
+    id = 'path-testfit0001'; target = 'studioops-cli'; lever = 'latency'; tactic = 'raise-context'
+    invert = 'none'; probe = 'static-score'; hypothesis = 'On studioops-cli, improve latency by applying raise-context; validate with static-score.'
+    unconventional = $false; risk = 'low'; cost_to_try = 'cheap'
+}
+$fitBanned = Get-WpaiImproveFitness -PathObj $fakePath
+Assert-True ($fitBanned.banned -eq $true) 'fitness marks banned gene'
+Assert-True ($fitBanned.score -lt 0.15) "banned fitness score low ($($fitBanned.score))"
+
+$fakeGood = [pscustomobject]@{
+    id = 'path-testfit0002'; target = 'studioops-cli'; lever = 'reliability'; tactic = 'double-entry'
+    invert = 'guess-then-falsify'; probe = 'static-score'
+    hypothesis = 'On studioops-cli, improve reliability by applying double-entry via guess-then-falsify; validate with static-score.'
+    unconventional = $true; risk = 'low'; cost_to_try = 'cheap'
+}
+$fitGood = Get-WpaiImproveFitness -PathObj $fakeGood
+Assert-True ($fitGood.banned -eq $false) 'good gene not banned'
+Assert-True ($fitGood.score -gt $fitBanned.score) "good score $($fitGood.score) > banned $($fitBanned.score)"
+
+# Diversity selection: many clones of one target should not fill entire top-K
+$divIn = @()
+for ($i = 0; $i -lt 8; $i++) {
+    $divIn += [pscustomobject]@{
+        id = "path-div-a$i"; score = 0.9 - ($i * 0.01); banned = $false
+        target = 'studioops-cli'; lever = 'latency'; tactic = 'cache'
+        hypothesis = 'clone-a'
+    }
+}
+for ($i = 0; $i -lt 5; $i++) {
+    $divIn += [pscustomobject]@{
+        id = "path-div-b$i"; score = 0.7 - ($i * 0.01); banned = $false
+        target = 'overnight'; lever = 'reliability'; tactic = 'fuzz'
+        hypothesis = 'clone-b'
+    }
+}
+$divOut = @(Select-WpaiImproveDiverseTop -Ranked $divIn -Top 6)
+Assert-True ($divOut.Count -eq 6) "diverse top count=$($divOut.Count)"
+$targets = @($divOut | ForEach-Object { $_.target } | Select-Object -Unique)
+Assert-True ($targets.Count -ge 2) "diversity keeps multiple targets ($($targets -join ','))"
+
+$st = Get-WpaiImproveStatus
+Assert-True ($st.catalog_paths -ge 0) 'improve status returns catalog_paths'
+Assert-True ($st.outcomes -ge 1) "improve status outcomes=$($st.outcomes)"
 
 Write-Host ""
 if ($failed -gt 0) {
