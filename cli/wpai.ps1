@@ -36,6 +36,8 @@ param(
     [int]$Probe = 0,
     [int]$Keep = 0,
     [int]$Inject = 0,
+    [switch]$Quiet,
+    [switch]$SkipTasks,
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -52,6 +54,8 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 . (Join-Path $here 'lib\WpaiOvernight.ps1')
 . (Join-Path $here 'lib\WpaiResearch.ps1')
 . (Join-Path $here 'lib\WpaiImproveSwarm.ps1')
+. (Join-Path $here 'lib\WpaiBudgetLedger.ps1')
+. (Join-Path $here 'lib\WpaiObserve.ps1')
 
 function Parse-WpaiRest {
     param([string[]]$Args)
@@ -92,6 +96,8 @@ WPAI control plane (on-demand)
     wpai kill set <global|loops|research|publishes> <true|false>
     wpai kill status
     wpai budget status
+    wpai budget ledger [-Tail N]          # day/month spent vs caps + double-entry log
+    wpai budget charge [-Budget usd] [-DryRun]  # dry spend estimate (no paid API)
     wpai budget set-day <usd>
     wpai budget set-month <usd>
 
@@ -143,6 +149,11 @@ WPAI control plane (on-demand)
     wpai improve briefs [-Top 8]
     wpai improve mutate [-Keep 30] [-Inject 80]
     (see improve-swarm/README.md — diverge → probe → converge → breakthrough)
+
+  OBSERVE (high-signal snapshot; append-only jsonl — not a poll loop)
+    wpai observe snapshot [-SkipTasks] [-Quiet]
+    (also: improve-swarm/experiments/run-observe.ps1)
+    Prefer event-driven bus over high-frequency polling (min ~30s).
 
   Paths: C:\WPAI\Workspace\.wpai\
   Protocol: C:\WPAI\Workspace\.hellforge\PROTOCOL.md
@@ -270,15 +281,40 @@ switch ($cmd) {
     'budget' {
         if ($sub -eq 'status' -or -not $sub) {
             (Get-WpaiBlackboard).budgets | ConvertTo-Json
+        } elseif ($sub -eq 'ledger') {
+            $tail = 10
+            if ($map.ContainsKey('Tail')) { $tail = [int]$map['Tail'] }
+            elseif ($pos.Count -gt 0) { $tail = [int]$pos[0] }
+            Show-WpaiBudgetLedger -Tail $tail | Out-Null
+        } elseif ($sub -eq 'charge') {
+            # Dry accounting charge (no paid APIs). Prefer -Budget; else cost-model default.
+            $usd = 0.0
+            if ($Budget -gt 0) { $usd = $Budget }
+            elseif ($map.ContainsKey('Budget')) { $usd = [double]$map['Budget'] }
+            elseif ($map.ContainsKey('Usd')) { $usd = [double]$map['Usd'] }
+            elseif ($pos.Count -gt 0) { $usd = [double]$pos[0] }
+            $memo = if ($Reason) { $Reason } elseif ($map.ContainsKey('Memo')) { [string]$map['Memo'] } else { 'cli budget charge' }
+            $r = Add-WpaiBudgetCharge -Usd $usd -Memo $memo -DryRun:$DryRun
+            Write-Host ("charge entry={0} usd={1} applied={2} dry={3}" -f $r.entry_id, $r.usd, $r.applied, $r.dry_run) -ForegroundColor Cyan
+            if ($r.applied) {
+                Write-Host ("  day_after={0} month_after={1}" -f $r.day_after, $r.month_after)
+            }
+            Write-Host ("  ledger={0}" -f $r.ledger_path)
         } elseif ($sub -eq 'set-day') {
             $v = if ($pos.Count -gt 0) { [double]$pos[0] } elseif ($map.ContainsKey('Value')) { [double]$map['Value'] } else { throw 'value required' }
+            $old = 0.0
+            try { $old = [double](Get-WpaiBlackboard).budgets.api_usd_cap_day } catch { $old = 0.0 }
             Invoke-WpaiBlackboardRmw -Mutator { param($bb) $bb['budgets']['api_usd_cap_day'] = $v } | Out-Null
+            Write-WpaiBudgetCapChange -Period day -NewCap $v -OldCap $old | Out-Null
             Write-Host "day cap = $v"
         } elseif ($sub -eq 'set-month') {
             $v = if ($pos.Count -gt 0) { [double]$pos[0] } elseif ($map.ContainsKey('Value')) { [double]$map['Value'] } else { throw 'value required' }
+            $old = 0.0
+            try { $old = [double](Get-WpaiBlackboard).budgets.api_usd_cap_month } catch { $old = 0.0 }
             Invoke-WpaiBlackboardRmw -Mutator { param($bb) $bb['budgets']['api_usd_cap_month'] = $v } | Out-Null
+            Write-WpaiBudgetCapChange -Period month -NewCap $v -OldCap $old | Out-Null
             Write-Host "month cap = $v"
-        } else { throw "unknown budget sub: $sub" }
+        } else { throw "unknown budget sub: $sub (status|ledger|charge|set-day|set-month)" }
         break
     }
     'approve' {
@@ -471,6 +507,21 @@ switch ($cmd) {
             $keepN = if ($map.ContainsKey('Keep')) { [int]$map['Keep'] } else { 500 }
             Invoke-WpaiBusArchive -KeepLines $keepN | Format-List
         } else { throw 'bus sub: archive' }
+        break
+    }
+    'observe' {
+        # Read-only high-signal snapshot → logs/observe.jsonl (no BLACKBOARD write)
+        if ($sub -eq 'snapshot' -or -not $sub) {
+            $skipT = [bool]$SkipTasks -or $map.ContainsKey('SkipTasks') -or $map.ContainsKey('skipTasks')
+            $quiet = [bool]$Quiet -or $map.ContainsKey('Quiet') -or $map.ContainsKey('quiet')
+            $r = Write-WpaiObserveSnapshot -SkipTasks:$skipT -Quiet:$quiet
+            if ($quiet) {
+                # still return machine-usable one-liner path for scripts
+                Write-Output $r.log_path
+            }
+        } else {
+            throw 'observe sub: snapshot'
+        }
         break
     }
     'improve' {

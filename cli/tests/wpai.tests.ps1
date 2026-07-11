@@ -18,6 +18,7 @@ $cli = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 . (Join-Path $cli 'lib\WpaiBridge.ps1')
 . (Join-Path $cli 'lib\WpaiOvernight.ps1')
 . (Join-Path $cli 'lib\WpaiResearch.ps1')
+. (Join-Path $cli 'lib\WpaiBudgetLedger.ps1')
 
 # Install / defaults
 $r = Ensure-WpaiRuntime
@@ -166,6 +167,18 @@ Assert-True ($stillPending -contains $pendingKeep.Ticket.id) 'pending-ids still 
 # Bus archive dry (may no-op if small)
 $arch = Invoke-WpaiBusArchive -KeepLines 100000
 Assert-True ($null -ne $arch) 'bus archive returns object'
+
+# Budget ledger: double-entry dry charge + balance check (no paid APIs)
+$chg = Add-WpaiBudgetCharge -Usd 0.01 -Memo 'unit-test dry charge' -DryRun
+Assert-True ($chg.dry_run -eq $true) 'budget charge dry_run'
+Assert-True ($chg.applied -eq $false) 'budget charge not applied on DryRun'
+Assert-True ($chg.entry_id -like 'ble-*') 'budget charge entry_id'
+Assert-True (Test-Path $chg.ledger_path) 'budget-ledger.jsonl exists'
+$sum = Get-WpaiBudgetLedgerSummary -Tail 4
+Assert-True ($sum.ledger_lines -ge 2) 'ledger has legs'
+Assert-True ($null -ne $sum.day_cap_usd) 'ledger summary day cap'
+$bal = Test-WpaiBudgetLedgerBalance
+Assert-True ($bal.ok -eq $true) "ledger balanced ($($bal.reason) entries=$($bal.entries))"
 
 Write-Host ""
 if ($failed -gt 0) {
