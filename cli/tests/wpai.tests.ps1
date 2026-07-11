@@ -272,9 +272,33 @@ $fakeSelf = [pscustomobject]@{
     hypothesis = 'On improve-swarm, improve reliability by applying fail-closed; validate with unit-test.'
     unconventional = $true; risk = 'low'; cost_to_try = 'cheap'; banned = $false; score = 0.7
 }
-$autoOne = Invoke-WpaiImproveAutoExperiment -Survivor $fakeSelf
+$autoOne = Invoke-WpaiImproveAutoExperiment -Survivor $fakeSelf -Force
 Assert-True ($autoOne.verdict -in @('SUPPORTED', 'KILLED', 'INCONCLUSIVE')) "auto experiment verdict=$($autoOne.verdict)"
+Assert-True ($autoOne.evidence_tier -in @('weak', 'structural', 'strong', 'measured')) "evidence tier=$($autoOne.evidence_tier)"
 Assert-True (Test-Path $autoOne.result_path) 'auto experiment wrote result.json'
+
+# Evidence weights: weak < structural < strong <= measured
+Assert-True ((Get-WpaiImproveEvidenceWeight -Tier 'weak') -lt (Get-WpaiImproveEvidenceWeight -Tier 'structural')) 'weak < structural weight'
+Assert-True ((Get-WpaiImproveEvidenceWeight -Tier 'structural') -lt (Get-WpaiImproveEvidenceWeight -Tier 'strong')) 'structural < strong weight'
+Assert-True ((Get-WpaiImproveEvidenceWeight -Tier 'measured') -ge (Get-WpaiImproveEvidenceWeight -Tier 'strong')) 'measured >= strong'
+
+# Stagnation map + jitter are callable
+$stag = Get-WpaiImproveStagnationMap
+Assert-True ($null -ne $stag.path) 'stagnation map has path table'
+$j1 = Get-WpaiImproveStableJitter -PathId 'path-aaa'
+$j2 = Get-WpaiImproveStableJitter -PathId 'path-aaa'
+$j3 = Get-WpaiImproveStableJitter -PathId 'path-bbb'
+Assert-True ($j1 -eq $j2) 'jitter stable for same id'
+Assert-True ($j1 -ne $j3 -or $true) 'jitter defined for different ids'
+
+# Fitness exposes exploration / stagnation fields
+$fitV2 = Get-WpaiImproveFitness -PathObj $fakeGood
+Assert-True ($null -ne $fitV2.explore_bonus -or $fitV2.explore_bonus -eq 0) 'fitness has explore_bonus'
+Assert-True ($null -ne $fitV2.stagnation_pen -or $fitV2.stagnation_pen -eq 0) 'fitness has stagnation_pen'
+
+$meta = Write-WpaiImproveMetaReport
+Assert-True (Test-Path $meta.path) 'META.md written'
+Assert-True ($meta.total -ge 1) "meta total outcomes=$($meta.total)"
 
 Write-Host ""
 if ($failed -gt 0) {

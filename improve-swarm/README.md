@@ -91,7 +91,7 @@ pwsh -File cli\wpai.ps1 improve elite
 | `Workspace\.wpai\improve-swarm\elite.json` | Hall-of-fame SUPPORTED genes (survive mutate) |
 | `Workspace\.wpai\improve-swarm\UNLEASH.md` | Multi-wave self-evolution report |
 
-## Fitness (v1, no paid APIs)
+## Fitness (v2, no paid APIs)
 
 | Signal | Weight | Notes |
 |--------|--------|-------|
@@ -99,11 +99,16 @@ pwsh -File cli\wpai.ps1 improve elite
 | `novelty` | med | Uncommon lever×tactic×invert combo |
 | `measurable_hook` | high | Path names a metric (latency, tokens, reliability…) |
 | `probe_ok` | high | Cheap local probe must pass |
-| `learn_boost` | med | SUPPORTED genes boosted; KILLED genes demoted |
+| `learn_boost` | med | **Evidence-weighted** (measured > strong > structural > weak); diminishing returns |
+| `explore_bonus` | low | Untested genes get a small lift |
+| `stagnation_pen` | med | Leaders that repeat without strong evidence demote |
+| `jitter` | tiny | Stable path-id jitter breaks score plateaus |
 | `ban` | hard | Banned tactic×lever or path_id → near-zero score |
 | `risk_penalty` | high | Publish/money/ungated mutation → demote |
 | `cost_to_try` | med | Prefer cheap probes early generations |
 | `diversity` | selection | Survivors prefer distinct target/lever/tactic |
+
+Auto-experiments default to **INCONCLUSIVE**, not free SUPPORTED. Presence-only checks are structural at best. See `META.md` for kill rate + score variance.
 
 ## Learning rules
 

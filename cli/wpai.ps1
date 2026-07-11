@@ -661,12 +661,17 @@ switch ($cmd) {
             Write-Host ("self-inject: catalog={0} injected={1} skipped_banned={2}" -f $r.count, $r.injected, $r.skipped_banned) -ForegroundColor Green
         } elseif ($sub -eq 'auto') {
             $lim = if ($AutoLimit -gt 0) { $AutoLimit } elseif ($Limit -gt 0) { $Limit } elseif ($map.ContainsKey('Limit')) { [int]$map['Limit'] } elseif ($map.ContainsKey('AutoLimit')) { [int]$map['AutoLimit'] } else { 12 }
-            $r = Invoke-WpaiImproveAutoWave -Limit $lim -SelfOnly:$SelfOnly
-            Write-Host ("auto-wave gen {0}: {1} attempted · {2} SUPPORTED · {3} KILLED · {4} INCONCLUSIVE" -f `
-                $r.generation, $r.attempted, $r.supported, $r.killed, $r.inconclusive) -ForegroundColor Green
+            $r = Invoke-WpaiImproveAutoWave -Limit $lim -SelfOnly:$SelfOnly -Force:$Force
+            Write-Host ("auto-wave gen {0}: {1} attempted · {2}S / {3}K / {4}I · skipped={5}" -f `
+                $r.generation, $r.attempted, $r.supported, $r.killed, $r.inconclusive, $r.skipped) -ForegroundColor Green
             foreach ($x in $r.results) {
+                if ($x.skipped) {
+                    Write-Host ("  [SKIP] {0}  {1}" -f $x.path_id, $x.note) -ForegroundColor DarkGray
+                    continue
+                }
                 $col = if ($x.verdict -eq 'SUPPORTED') { 'Green' } elseif ($x.verdict -eq 'KILLED') { 'Red' } else { 'Yellow' }
-                Write-Host ("  [{0}] {1}  {2}/{3}  {4}" -f $x.verdict, $x.path_id, $x.target, $x.tactic, $x.note) -ForegroundColor $col
+                $et = if ($x.evidence_tier) { $x.evidence_tier } else { '?' }
+                Write-Host ("  [{0}/{1}] {2}  {3}/{4}  {5}" -f $x.verdict, $et, $x.path_id, $x.target, $x.tactic, $x.note) -ForegroundColor $col
             }
             Write-Host 'Next: wpai improve learn'
         } elseif ($sub -eq 'unleash') {
@@ -682,9 +687,12 @@ switch ($cmd) {
             Write-Host ("done: gen={0} wall={1}s supported={2} killed={3}" -f $r.final_generation, $r.wall_sec, $r.total_supported, $r.total_killed) -ForegroundColor Green
             Write-Host ("report: {0}" -f $r.unleash_path)
             foreach ($wr in $r.reports) {
-                Write-Host ("  wave {0} gen {1}: auto {2}S/{3}K/{4}I  elites={5}" -f `
-                    $wr.wave, $wr.generation, $wr.auto_supported, $wr.auto_killed, $wr.auto_inconclusive, $wr.elites_total) -ForegroundColor Cyan
+                Write-Host ("  wave {0} gen {1}: auto {2}S/{3}K/{4}I skip={5}  killRate={6}% var={7} elites={8}" -f `
+                    $wr.wave, $wr.generation, $wr.auto_supported, $wr.auto_killed, $wr.auto_inconclusive, `
+                    $wr.auto_skipped, $wr.kill_rate_pct, $wr.score_variance, $wr.elites_total) -ForegroundColor Cyan
             }
+            $metaPath = Join-Path (Get-WpaiImproveRuntimeDir) 'META.md'
+            if (Test-Path $metaPath) { Write-Host ("meta: {0}" -f $metaPath) }
         } elseif ($sub -eq 'elite' -or $sub -eq 'elites') {
             $el = Update-WpaiImproveEliteArchive
             $doc = Get-WpaiImproveElites
