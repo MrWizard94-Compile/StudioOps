@@ -279,6 +279,22 @@ Assert-True ($autoOne.verdict -in @('SUPPORTED', 'KILLED', 'INCONCLUSIVE')) "aut
 Assert-True ($autoOne.evidence_tier -in @('weak', 'structural', 'strong', 'measured')) "evidence tier=$($autoOne.evidence_tier)"
 Assert-True (Test-Path $autoOne.result_path) 'auto experiment wrote result.json'
 
+# Property-based quick-check harness (ported QuickCheck/Hypothesis algorithm)
+$qcPass = Invoke-WpaiImproveQuickCheck -Cases 20 -Seed 42 -Generator { param($rng) $rng.Next(0, 100) } -Property { param($n) $n -ge 0 }
+Assert-True ($qcPass.ok -and $qcPass.cases_checked -eq 20) "quickcheck passes true property (checked=$($qcPass.cases_checked))"
+$qcFail = Invoke-WpaiImproveQuickCheck -Cases 64 -Seed 1 -Generator { param($rng) $rng.Next(0, 2) } -Property { param($n) $n -eq 0 }
+Assert-True ((-not $qcFail.ok) -and ($qcFail.counterexample -eq 1)) "quickcheck falsifies + counterexample=$($qcFail.counterexample)"
+
+# property-test tactic now runs real randomized ban-robustness falsification (measured)
+$fakeProp = [pscustomobject]@{
+    id = 'path-selftest0002'; target = 'improve-swarm'; lever = 'reliability'; tactic = 'property-test'
+    invert = 'none'; probe = 'property-quick'
+    hypothesis = 'On improve-swarm, improve reliability by applying property-test; validate with property-quick.'
+    unconventional = $true; risk = 'low'; cost_to_try = 'cheap'; banned = $false; score = 0.7
+}
+$autoProp = Invoke-WpaiImproveAutoExperiment -Survivor $fakeProp -Force
+Assert-True ($autoProp.verdict -eq 'SUPPORTED' -and $autoProp.evidence_tier -eq 'measured') "property-test auto: ban robust => measured SUPPORTED ($($autoProp.verdict))"
+
 # Evidence weights: weak < structural < strong <= measured
 Assert-True ((Get-WpaiImproveEvidenceWeight -Tier 'weak') -lt (Get-WpaiImproveEvidenceWeight -Tier 'structural')) 'weak < structural weight'
 Assert-True ((Get-WpaiImproveEvidenceWeight -Tier 'structural') -lt (Get-WpaiImproveEvidenceWeight -Tier 'strong')) 'structural < strong weight'

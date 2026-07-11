@@ -2493,6 +2493,46 @@ function Write-WpaiImproveExperimentResult {
     return $path
 }
 
+function Invoke-WpaiImproveQuickCheck {
+    <#
+    .SYNOPSIS
+      Property-based falsification probe: generate N random cases, assert an invariant on each,
+      return the first counterexample. Real falsification, not a single lucky check.
+    .NOTES
+      Algorithm ported (not copied) from property-based testing (QuickCheck / Hypothesis, MIT):
+      generate -> check -> report counterexample. Local, no dependencies.
+    #>
+    param(
+        [Parameter(Mandatory)][scriptblock]$Generator,   # (rng) -> one random case
+        [Parameter(Mandatory)][scriptblock]$Property,     # (case) -> [bool] invariant holds?
+        [int]$Cases = 30,
+        [int]$Seed = 0
+    )
+    if ($Cases -lt 1) { $Cases = 1 }
+    if ($Seed -le 0) { $Seed = [int]([DateTime]::UtcNow.Ticks % 2147483647) }
+    $rng = [System.Random]::new($Seed)
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $checked = 0
+    $counter = $null
+    $ok = $true
+    for ($i = 0; $i -lt $Cases; $i++) {
+        $case = & $Generator $rng
+        $checked++
+        $held = $false
+        try { $held = [bool](& $Property $case) } catch { $held = $false }
+        if (-not $held) { $ok = $false; $counter = $case; break }
+    }
+    $sw.Stop()
+    return [pscustomobject]@{
+        ok             = $ok
+        cases_checked  = $checked
+        cases_planned  = $Cases
+        seed           = $Seed
+        counterexample = $counter
+        elapsed_ms     = $sw.ElapsedMilliseconds
+    }
+}
+
 function Invoke-WpaiImproveAutoExperiment {
     <#
     .SYNOPSIS
@@ -2627,26 +2667,69 @@ function Invoke-WpaiImproveAutoExperiment {
                     }
                 }
                 'fail-closed|property-test|test-only' {
-                    $ban = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency'
-                    $fitBan = Get-WpaiImproveFitness -PathObj ([pscustomobject]@{
-                            id = 'path-bancheck0001'; target = 'janus-loop'; lever = 'latency'; tactic = 'raise-context'
-                            invert = 'none'; probe = 'static-score'; hypothesis = 'bancheck'
-                            unconventional = $false; risk = 'low'; cost_to_try = 'cheap'
-                        })
-                    $div = @(Select-WpaiImproveDiverseTop -Ranked @(
-                            [pscustomobject]@{ id = 'a1'; score = 0.9; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
-                            [pscustomobject]@{ id = 'a2'; score = 0.89; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
-                            [pscustomobject]@{ id = 'b1'; score = 0.7; banned = $false; target = 'studioops-cli'; lever = 'dx'; tactic = 'cache' }
-                        ) -Top 2)
-                    $metrics['ban_raise_context_latency'] = [bool]$ban.banned
-                    $metrics['banned_score'] = $fitBan.score
-                    $metrics['diverse_targets'] = @($div | ForEach-Object { $_.target } | Select-Object -Unique).Count
-                    if ($ban.banned -and $fitBan.score -lt 0.15 -and $metrics['diverse_targets'] -ge 2) {
-                        $verdict = 'SUPPORTED'; $tier = 'measured'
-                        $note = "fail-closed ban score=$($fitBan.score) diversity=$($metrics['diverse_targets'])"
+                    if ($tactic -eq 'property-test') {
+                        # Real randomized falsification (ported QuickCheck/Hypothesis algorithm):
+                        # the raise-context×latency ban must hold for ANY field permutation, not one case.
+                        $banActive = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency'
+                        if (-not $banActive.banned) {
+                            $verdict = 'INCONCLUSIVE'; $tier = 'weak'
+                            $note = 'raise-context×latency not currently banned — property N/A this run'
+                        } else {
+                            $qc = Invoke-WpaiImproveQuickCheck -Cases 30 -Generator {
+                                param($rng)
+                                $inverts = @('none', 'invert-assumption', 'guess-then-falsify', 'measure-then-guess', 'do-opposite')
+                                $probes = @('static-score', 'dry-run-script', 'unit-test', 'micro-bench', 'schema-validate')
+                                $risks = @('low', 'med', 'high')
+                                $costs = @('cheap', 'med', 'expensive')
+                                [pscustomobject]@{
+                                    id             = 'path-prop' + $rng.Next(100000, 999999)
+                                    target         = 'janus-loop'; lever = 'latency'; tactic = 'raise-context'
+                                    invert         = $inverts[$rng.Next($inverts.Count)]
+                                    probe          = $probes[$rng.Next($probes.Count)]
+                                    hypothesis     = 'property ban-robustness'
+                                    unconventional = ($rng.Next(2) -eq 1)
+                                    risk           = $risks[$rng.Next($risks.Count)]
+                                    cost_to_try    = $costs[$rng.Next($costs.Count)]
+                                }
+                            } -Property {
+                                param($case)
+                                $f = Get-WpaiImproveFitness -PathObj $case
+                                return ($f.banned -and $f.score -lt 0.15)
+                            }
+                            $metrics['property'] = 'raise-context×latency ban robust to field permutations'
+                            $metrics['cases_checked'] = $qc.cases_checked
+                            $metrics['qc_ok'] = $qc.ok
+                            if ($qc.ok) {
+                                $verdict = 'SUPPORTED'; $tier = 'measured'
+                                $note = "property held: ban robust across $($qc.cases_checked) random permutations"
+                            } else {
+                                $ce = $qc.counterexample
+                                $verdict = 'KILLED'; $tier = 'strong'
+                                $note = "property FALSIFIED: ban leaked (invert=$($ce.invert) probe=$($ce.probe) risk=$($ce.risk))"
+                            }
+                        }
                     } else {
-                        $verdict = 'KILLED'; $tier = 'strong'
-                        $note = "ban/diversity/score fail ban=$($ban.banned) score=$($fitBan.score)"
+                        $ban = Test-WpaiImproveGeneBanned -Tactic 'raise-context' -Lever 'latency'
+                        $fitBan = Get-WpaiImproveFitness -PathObj ([pscustomobject]@{
+                                id = 'path-bancheck0001'; target = 'janus-loop'; lever = 'latency'; tactic = 'raise-context'
+                                invert = 'none'; probe = 'static-score'; hypothesis = 'bancheck'
+                                unconventional = $false; risk = 'low'; cost_to_try = 'cheap'
+                            })
+                        $div = @(Select-WpaiImproveDiverseTop -Ranked @(
+                                [pscustomobject]@{ id = 'a1'; score = 0.9; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+                                [pscustomobject]@{ id = 'a2'; score = 0.89; banned = $false; target = 'improve-swarm'; lever = 'reliability'; tactic = 'fuzz' }
+                                [pscustomobject]@{ id = 'b1'; score = 0.7; banned = $false; target = 'studioops-cli'; lever = 'dx'; tactic = 'cache' }
+                            ) -Top 2)
+                        $metrics['ban_raise_context_latency'] = [bool]$ban.banned
+                        $metrics['banned_score'] = $fitBan.score
+                        $metrics['diverse_targets'] = @($div | ForEach-Object { $_.target } | Select-Object -Unique).Count
+                        if ($ban.banned -and $fitBan.score -lt 0.15 -and $metrics['diverse_targets'] -ge 2) {
+                            $verdict = 'SUPPORTED'; $tier = 'measured'
+                            $note = "fail-closed ban score=$($fitBan.score) diversity=$($metrics['diverse_targets'])"
+                        } else {
+                            $verdict = 'KILLED'; $tier = 'strong'
+                            $note = "ban/diversity/score fail ban=$($ban.banned) score=$($fitBan.score)"
+                        }
                     }
                 }
                 'snapshot|event-source' {
