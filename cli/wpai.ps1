@@ -586,11 +586,11 @@ switch ($cmd) {
             Write-Host ("mutated catalog: {0} paths (from gen {1}, kept={2}, skipped_banned={3})" -f $r.count, $r.from_generation, $r.kept, $r.skipped_banned) -ForegroundColor Green
             Write-Host 'Next: wpai improve generation'
         } elseif ($sub -eq 'record') {
-            $pid = if ($PathId) { $PathId } elseif ($map.ContainsKey('PathId')) { [string]$map['PathId'] } elseif ($pos.Count -ge 1) { [string]$pos[0] } else { '' }
+            $recPathId = if ($PathId) { $PathId } elseif ($map.ContainsKey('PathId')) { [string]$map['PathId'] } elseif ($pos.Count -ge 1) { [string]$pos[0] } else { '' }
             $ver = if ($Verdict) { $Verdict } elseif ($map.ContainsKey('Verdict')) { [string]$map['Verdict'] } elseif ($pos.Count -ge 2) { [string]$pos[1] } else { '' }
             $nte = if ($Note) { $Note } elseif ($map.ContainsKey('Note')) { [string]$map['Note'] } else { '' }
-            if (-not $pid -or -not $ver) { throw 'improve record requires -PathId and -Verdict KILLED|SUPPORTED|INCONCLUSIVE' }
-            $r = Write-WpaiImproveOutcome -PathId $pid -Verdict $ver.ToUpperInvariant() -Source 'manual' -Note $nte
+            if (-not $recPathId -or -not $ver) { throw 'improve record requires -PathId and -Verdict KILLED|SUPPORTED|INCONCLUSIVE' }
+            $r = Write-WpaiImproveOutcome -PathId $recPathId -Verdict $ver.ToUpperInvariant() -Source 'manual' -Note $nte
             if ($r.deduped) {
                 Write-Host ("outcome already recorded: {0} {1}" -f $r.path_id, $r.verdict) -ForegroundColor Yellow
             } else {
