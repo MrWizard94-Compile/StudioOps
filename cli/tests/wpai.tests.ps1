@@ -300,6 +300,26 @@ $meta = Write-WpaiImproveMetaReport
 Assert-True (Test-Path $meta.path) 'META.md written'
 Assert-True ($meta.total -ge 1) "meta total outcomes=$($meta.total)"
 
+# Auto-review classification (honest labels) — do not nest full unit suite (-SkipTests)
+$shipKind = Get-WpaiImproveHypoKind -Item ([pscustomobject]@{
+        path_id = 'path-8e633381189e'; verdict = 'SUPPORTED'; breakthrough_class = 'ship:blackboard-integrity-doctor'
+        note = 'doctor'; source = 'experiment'
+    })
+Assert-True ($shipKind.kind -eq 'SHIPPED') "ship class -> $($shipKind.kind)"
+$ideaKind = Get-WpaiImproveHypoKind -Item ([pscustomobject]@{
+        path_id = 'path-idea00000001'; verdict = ''; note = 'On studioops-cli, improve latency by applying cache'
+        source = 'generation'
+    })
+Assert-True ($ideaKind.kind -eq 'IDEA') "bare hypothesis -> $($ideaKind.kind)"
+$propKind = Get-WpaiImproveHypoKind -Item ([pscustomobject]@{
+        path_id = 'path-prop00000001'; verdict = 'SUPPORTED'; breakthrough_class = 'measured:budget-ledger-balanced'
+        note = 'budget ledger balanced'; source = 'auto-experiment'
+    })
+Assert-True ($propKind.kind -eq 'PROPERTY') "measured invariant -> $($propKind.kind)"
+$rev = Invoke-WpaiImproveAutoReview -TopLeaders 5 -SkipTests
+Assert-True (Test-Path $rev.path) 'SELF-REVIEW.md written'
+Assert-True (($rev.shipped + $rev.property + $rev.idea + $rev.killed) -ge 1) 'review has classified rows'
+
 Write-Host ""
 if ($failed -gt 0) {
     Write-Host "FAILED: $failed assertion(s)" -ForegroundColor Red

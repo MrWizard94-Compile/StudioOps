@@ -1277,12 +1277,20 @@ function Invoke-WpaiImproveProbe {
                 } else { $detail = 'dry-run n/a'; $ok = $true }
             }
             'self-check' {
-                $ok = Test-Path 'C:\WPAI\Software\StudioOps\cli\Self-Check-Wpai.ps1'
-                $detail = 'self-check script exists (not re-run per path)'
+                # Run a cheap shape check, not "file exists"
+                if (Get-Command Test-WpaiBlackboardShape -ErrorAction SilentlyContinue) {
+                    $shape = Test-WpaiBlackboardShape -Blackboard (Get-WpaiBlackboard)
+                    $ok = [bool]$shape.ok
+                    $detail = if ($ok) { 'blackboard shape ok' } else { "shape fail: $($shape.issues -join ';')" }
+                } else {
+                    $ok = Test-Path 'C:\WPAI\Software\StudioOps\cli\Self-Check-Wpai.ps1'
+                    $detail = 'self-check script exists (shape helper not loaded)'
+                }
             }
             'unit-test' {
-                $ok = Test-Path 'C:\WPAI\Software\StudioOps\cli\tests\wpai.tests.ps1'
-                $detail = 'unit harness exists'
+                $tr = Invoke-WpaiImproveRunUnitTests
+                $ok = [bool]$tr.ok
+                $detail = "unit_tests exit=$($tr.exit_code) ms=$($tr.ms) cached=$($tr.cached)"
             }
             'micro-bench' {
                 # Cheap wall-clock of a local file op — no paid API
@@ -2959,6 +2967,281 @@ function Invoke-WpaiImprovePurgeTrash {
     return [pscustomobject]$report
 }
 
+# ── Auto-review: ideas vs properties vs shipped ──────────────────────────────
+
+$script:WpaiImproveUnitTestCache = $null
+
+function Invoke-WpaiImproveRunUnitTests {
+    <#
+    .SYNOPSIS
+      Actually run StudioOps unit tests (cached ~10 min per process).
+    #>
+    param([switch]$Force)
+    if (-not $Force -and $script:WpaiImproveUnitTestCache) {
+        $age = ([DateTime]::UtcNow - [DateTime]$script:WpaiImproveUnitTestCache.at).TotalMinutes
+        if ($age -lt 10) {
+            $c = $script:WpaiImproveUnitTestCache
+            return [pscustomobject]@{
+                ok = $c.ok; exit_code = $c.exit_code; ms = $c.ms; cached = $true
+                summary = $c.summary; log_tail = $c.log_tail
+            }
+        }
+    }
+    $tests = 'C:\WPAI\Software\StudioOps\cli\tests\wpai.tests.ps1'
+    if (-not (Test-Path -LiteralPath $tests)) {
+        return [pscustomobject]@{
+            ok = $false; exit_code = 127; ms = 0; cached = $false
+            summary = 'wpai.tests.ps1 missing'; log_tail = ''
+        }
+    }
+    $sw = [System.Diagnostics.Stopwatch]::StartNew()
+    $log = & pwsh -NoProfile -File $tests 2>&1 | Out-String
+    $code = $LASTEXITCODE
+    $sw.Stop()
+    $ok = ($code -eq 0) -and ($log -match 'ALL PASS')
+    $summary = if ($ok) { 'ALL PASS' } elseif ($log -match 'FAILED:\s*(\d+)') { "FAILED: $($Matches[1])" } else { "exit $code" }
+    $tail = if ($log.Length -gt 600) { $log.Substring($log.Length - 600) } else { $log }
+    $script:WpaiImproveUnitTestCache = [pscustomobject]@{
+        at = [DateTime]::UtcNow; ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds
+        summary = $summary; log_tail = $tail
+    }
+    return [pscustomobject]@{
+        ok = $ok; exit_code = $code; ms = $sw.ElapsedMilliseconds; cached = $false
+        summary = $summary; log_tail = $tail
+    }
+}
+
+function Get-WpaiImproveHypoKind {
+    <#
+    .SYNOPSIS
+      Classify a path/outcome as IDEA | PROPERTY | SHIPPED | KILLED | UNKNOWN.
+      Honest labels: most swarm output is IDEA or PROPERTY, not SHIPPED code.
+    #>
+    param($Item)
+
+    $verdict = ''
+    if ($Item.PSObject.Properties.Match('verdict').Count -gt 0) { $verdict = [string]$Item.verdict }
+    $note = ''
+    if ($Item.PSObject.Properties.Match('note').Count -gt 0) { $note = [string]$Item.note }
+    $cls = ''
+    if ($Item.PSObject.Properties.Match('breakthrough_class').Count -gt 0) { $cls = [string]$Item.breakthrough_class }
+    $src = ''
+    if ($Item.PSObject.Properties.Match('source').Count -gt 0) { $src = [string]$Item.source }
+    $artifact = ''
+    if ($Item.PSObject.Properties.Match('artifact').Count -gt 0) { $artifact = [string]$Item.artifact }
+    $id = ''
+    if ($Item.PSObject.Properties.Match('path_id').Count -gt 0) { $id = [string]$Item.path_id }
+    elseif ($Item.PSObject.Properties.Match('id').Count -gt 0) { $id = [string]$Item.id }
+
+    if ($verdict -eq 'KILLED' -or $cls -match '^kill:') {
+        return [pscustomobject]@{ kind = 'KILLED'; reason = 'falsified hypothesis / dead gene' }
+    }
+    if ($cls -match '^ship:') {
+        return [pscustomobject]@{ kind = 'SHIPPED'; reason = "curated shipped breakthrough: $cls" }
+    }
+    if ($cls -match '^measured:' -or $note -match 'ledger append\+dedupe|budget ledger balanced|kill switch|ban_sig=-|blackboard shape ok') {
+        return [pscustomobject]@{ kind = 'PROPERTY'; reason = 'measured system invariant (not a new feature ship)' }
+    }
+    # Code artifact that is not just result.json
+    if ($artifact -and $artifact -notmatch 'result\.json$' -and (Test-Path -LiteralPath $artifact)) {
+        return [pscustomobject]@{ kind = 'SHIPPED'; reason = "artifact file: $artifact" }
+    }
+    # Known shipped experiment scripts under improve-swarm/experiments (non path-* result only dirs)
+    $expScriptMap = @{
+        'path-7d61dc66f9c7' = 'overnight dry-then-arm script'
+        'path-ac4bacaf07a8' = 'bus_prestige_archive.ps1'
+        'path-a8398d344cf1' = 'measure_ollama_latency.ps1'
+        'path-e136eb2c9be0' = 'overnight_chaos_kill.ps1'
+        'path-8e633381189e' = 'WpaiBlackboardVerify.ps1'
+    }
+    if ($id -and $expScriptMap.ContainsKey($id)) {
+        return [pscustomobject]@{ kind = 'SHIPPED'; reason = $expScriptMap[$id] }
+    }
+    if ($verdict -eq 'SUPPORTED' -and $src -eq 'auto-experiment') {
+        return [pscustomobject]@{ kind = 'PROPERTY'; reason = 'auto-experiment measured a property; no feature delta claimed' }
+    }
+    if ($verdict -eq 'INCONCLUSIVE') {
+        return [pscustomobject]@{ kind = 'IDEA'; reason = 'inconclusive — needs micro-impl + tests' }
+    }
+    # Scored survivor with no stronger evidence
+    return [pscustomobject]@{ kind = 'IDEA'; reason = 'hypothesis / score only — not validated as a code improvement' }
+}
+
+function Invoke-WpaiImproveAutoReview {
+    <#
+    .SYNOPSIS
+      Auto-review swarm output: run real unit tests, classify elites/leaders as
+      IDEA | PROPERTY | SHIPPED | KILLED. Writes SELF-REVIEW.md.
+    #>
+    param(
+        [int]$TopLeaders = 12,
+        [switch]$SkipTests
+    )
+    $rt = Get-WpaiImproveRuntimeDir
+    $testResult = $null
+    if (-not $SkipTests) {
+        $testResult = Invoke-WpaiImproveRunUnitTests
+    }
+
+    $rows = @()
+
+    # Elites
+    foreach ($e in @((Get-WpaiImproveElites).elites)) {
+        $kind = Get-WpaiImproveHypoKind -Item $e
+        $rows += [pscustomobject]@{
+            scope    = 'elite'
+            path_id  = [string]$e.path_id
+            target   = [string]$e.target
+            lever    = [string]$e.lever
+            tactic   = [string]$e.tactic
+            class    = $(if ($e.PSObject.Properties.Match('breakthrough_class').Count) { [string]$e.breakthrough_class } else { '' })
+            kind     = $kind.kind
+            reason   = $kind.reason
+            note     = [string]$e.note
+            tests    = $(if ($testResult) { $testResult.summary } else { 'skipped' })
+        }
+    }
+
+    # Latest generation top survivors (ideas the swarm wants next)
+    $gens = @(Get-ChildItem -LiteralPath $rt -Filter 'generation-*.json' -File -ErrorAction SilentlyContinue | Sort-Object Name -Descending)
+    if ($gens.Count -gt 0) {
+        $gen = Read-WpaiJsonFile -Path $gens[0].FullName
+        foreach ($s in @($gen.survivors | Select-Object -First $TopLeaders)) {
+            # Enrich with outcome if any
+            $o = @(Read-WpaiImproveOutcomes | Where-Object { $_.path_id -eq $s.id } | Select-Object -Last 1)
+            $item = $s
+            if ($o.Count -gt 0) {
+                $item = [pscustomobject]@{
+                    id = $s.id; path_id = $s.id; target = $s.target; lever = $s.lever; tactic = $s.tactic
+                    verdict = $o[0].verdict; note = $o[0].note; source = $o[0].source
+                    artifact = $(if ($o[0].PSObject.Properties.Match('artifact').Count) { $o[0].artifact } else { '' })
+                    breakthrough_class = ''
+                }
+            } else {
+                $item = [pscustomobject]@{
+                    id = $s.id; path_id = $s.id; target = $s.target; lever = $s.lever; tactic = $s.tactic
+                    verdict = ''; note = [string]$s.hypothesis; source = 'generation'
+                    artifact = ''; breakthrough_class = ''
+                }
+            }
+            $kind = Get-WpaiImproveHypoKind -Item $item
+            $rows += [pscustomobject]@{
+                scope    = 'leader'
+                path_id  = [string]$s.id
+                target   = [string]$s.target
+                lever    = [string]$s.lever
+                tactic   = [string]$s.tactic
+                class    = ''
+                kind     = $kind.kind
+                reason   = $kind.reason
+                note     = $(if ($item.note) { [string]$item.note } else { [string]$s.hypothesis })
+                tests    = $(if ($testResult) { $testResult.summary } else { 'skipped' })
+            }
+        }
+    }
+
+    $nIdea = @($rows | Where-Object { $_.kind -eq 'IDEA' }).Count
+    $nProp = @($rows | Where-Object { $_.kind -eq 'PROPERTY' }).Count
+    $nShip = @($rows | Where-Object { $_.kind -eq 'SHIPPED' }).Count
+    $nKill = @($rows | Where-Object { $_.kind -eq 'KILLED' }).Count
+
+    # Honest headline
+    $producing = if ($nShip -gt 0) { 'SOME shipped improvements exist' } else { 'MOSTLY ideas/properties — few or no code ships in this review set' }
+    $testsLine = if ($null -eq $testResult) {
+        'Unit tests: skipped'
+    } elseif ($testResult.ok) {
+        "Unit tests: PASS ($($testResult.summary), $($testResult.ms)ms, cached=$($testResult.cached))"
+    } else {
+        "Unit tests: FAIL ($($testResult.summary), exit=$($testResult.exit_code))"
+    }
+
+    $path = Join-Path $rt 'SELF-REVIEW.md'
+    $sb = New-Object System.Text.StringBuilder
+    [void]$sb.AppendLine('# Improve Swarm — SELF-REVIEW (auto)')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("Updated: $((Get-WpaiUtcNow))")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('## Honest summary')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("**$producing**")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("| Kind | Count | Meaning |")
+    [void]$sb.AppendLine("|------|------:|---------|")
+    [void]$sb.AppendLine("| SHIPPED | $nShip | Code/script landed and is attributable |")
+    [void]$sb.AppendLine("| PROPERTY | $nProp | Measured invariant (ledger, kill switch, bans) — real but not a feature |")
+    [void]$sb.AppendLine("| IDEA | $nIdea | Scored hypothesis / brief — **not yet an improvement** |")
+    [void]$sb.AppendLine("| KILLED | $nKill | Falsified — learning, not a ship |")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine("### $testsLine")
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('### What the swarm does **not** do by default')
+    [void]$sb.AppendLine('1. It does **not** implement every high-score hypothesis as a PR.')
+    [void]$sb.AppendLine('2. `probe=unit-test` used to mean "test file exists"; it now runs `wpai.tests.ps1` (this review).')
+    [void]$sb.AppendLine('3. Auto-experiments mostly verify **control-plane properties**, not product features.')
+    [void]$sb.AppendLine('4. Agents/humans still micro-implement non-self targets from briefs.')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('## Elites')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('| Kind | Path | Class | Target | Note |')
+    [void]$sb.AppendLine('|------|------|-------|--------|------|')
+    foreach ($r in @($rows | Where-Object { $_.scope -eq 'elite' })) {
+        $n = ($r.note -replace '\|', '/' -replace '\r?\n', ' ')
+        if ($n.Length -gt 60) { $n = $n.Substring(0, 57) + '...' }
+        [void]$sb.AppendLine(("| **{0}** | `{1}` | {2} | {3} | {4} |" -f $r.kind, $r.path_id, $r.class, $r.target, $n))
+    }
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('## Current leaders (mostly ideas unless classified otherwise)')
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('| Kind | Path | Target | Tactic | Why |')
+    [void]$sb.AppendLine('|------|------|--------|--------|-----|')
+    foreach ($r in @($rows | Where-Object { $_.scope -eq 'leader' })) {
+        $why = ($r.reason -replace '\|', '/')
+        if ($why.Length -gt 50) { $why = $why.Substring(0, 47) + '...' }
+        [void]$sb.AppendLine(("| **{0}** | `{1}` | {2} | {3} | {4} |" -f $r.kind, $r.path_id, $r.target, $r.tactic, $why))
+    }
+    [void]$sb.AppendLine('')
+    [void]$sb.AppendLine('## Gate')
+    [void]$sb.AppendLine('- Trust **SHIPPED** + **KILLED** for decisions.')
+    [void]$sb.AppendLine('- Treat **PROPERTY** as health checks, not roadmap wins.')
+    [void]$sb.AppendLine('- Treat **IDEA** as backlog candidates — need micro-impl + tests before celebrating.')
+    if ($testResult -and -not $testResult.ok) {
+        [void]$sb.AppendLine('- **BLOCKER:** unit tests failed — do not claim improve-system reliability.')
+    }
+    $utf8 = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($path, $sb.ToString(), $utf8)
+
+    # Machine-readable twin
+    $jsonPath = Join-Path $rt 'self-review.json'
+    Write-WpaiJsonAtomic -Path $jsonPath -Object ([ordered]@{
+            schema_version = '1.0.0'
+            updated_at     = (Get-WpaiUtcNow)
+            producing      = $producing
+            counts         = [ordered]@{ shipped = $nShip; property = $nProp; idea = $nIdea; killed = $nKill }
+            unit_tests     = $(if ($testResult) {
+                    [ordered]@{ ok = $testResult.ok; summary = $testResult.summary; ms = $testResult.ms; cached = $testResult.cached }
+                } else { $null })
+            rows           = @($rows | ForEach-Object {
+                    [ordered]@{
+                        scope = $_.scope; path_id = $_.path_id; kind = $_.kind; target = $_.target
+                        tactic = $_.tactic; class = $_.class; reason = $_.reason
+                    }
+                })
+        })
+
+    return [pscustomobject]@{
+        path           = $path
+        json_path      = $jsonPath
+        shipped        = $nShip
+        property       = $nProp
+        idea           = $nIdea
+        killed         = $nKill
+        unit_tests_ok  = $(if ($testResult) { [bool]$testResult.ok } else { $null })
+        unit_tests_ms  = $(if ($testResult) { $testResult.ms } else { 0 })
+        producing      = $producing
+        rows           = $rows
+    }
+}
+
 function Test-WpaiImproveReliability {
     <#
     .SYNOPSIS
@@ -3182,11 +3465,16 @@ function Invoke-WpaiImproveUnleash {
         [void]$sb.AppendLine('')
     }
     [void]$sb.AppendLine('## Next')
+    [void]$sb.AppendLine('- Read SELF-REVIEW.md — separates SHIPPED vs PROPERTY vs IDEA.')
     [void]$sb.AppendLine('- Read LEADERS.md + briefs for agent micro-impls on non-self targets.')
     [void]$sb.AppendLine('- Dead genes stay banned; elites re-enter every self-inject.')
     [void]$sb.AppendLine('- Re-run: `wpai improve unleash -Waves 2`')
     $utf8 = New-Object System.Text.UTF8Encoding $false
     [System.IO.File]::WriteAllText($unleashPath, $sb.ToString(), $utf8)
+
+    # Auto-review own output (unit tests + IDEA/PROPERTY/SHIPPED labels)
+    $review = $null
+    try { $review = Invoke-WpaiImproveAutoReview -TopLeaders 12 } catch { $review = $null }
 
     $reportsArr = @($waveReports)
 
@@ -3235,6 +3523,11 @@ function Invoke-WpaiImproveUnleash {
         wall_sec         = [math]::Round(([DateTime]::UtcNow - $t0).TotalSeconds, 2)
         unleash_path     = $unleashPath
         json_path        = $jsonPath
+        review_path      = $(if ($review) { $review.path } else { $null })
+        shipped          = $(if ($review) { $review.shipped } else { $null })
+        property         = $(if ($review) { $review.property } else { $null })
+        idea             = $(if ($review) { $review.idea } else { $null })
+        unit_tests_ok    = $(if ($review) { $review.unit_tests_ok } else { $null })
         reports          = $reportsArr
         final_generation = $last.generation
         total_supported  = $sumSupported

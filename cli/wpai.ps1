@@ -49,6 +49,7 @@ param(
     [switch]$SkipTasks,
     [switch]$SkipLearn,
     [switch]$SkipMutate,
+    [switch]$SkipTests,
     [switch]$SelfOnly,
 
     [Parameter(ValueFromRemainingArguments = $true)]
@@ -172,6 +173,7 @@ WPAI control plane (on-demand)
     wpai improve unleash [-Waves 2] [-AutoLimit 12] [-Briefs 8]  # swarm eats itself
     wpai improve purge                    # trash rubber-stamps; keep breakthroughs
     wpai improve doctor                   # reliability gate
+    wpai improve review                   # auto-review: IDEA vs PROPERTY vs SHIPPED + run unit tests
     wpai improve status | outcomes | bans | learning | elite
     (see improve-swarm/README.md — diverge → learn → probe → converge → unleash)
 
@@ -693,6 +695,11 @@ switch ($cmd) {
                     $wr.wave, $wr.generation, $wr.auto_supported, $wr.auto_killed, $wr.auto_inconclusive, `
                     $wr.auto_skipped, $wr.kill_rate_pct, $wr.score_variance, $wr.elites_total) -ForegroundColor Cyan
             }
+            if ($null -ne $r.shipped) {
+                $tc = if ($r.unit_tests_ok -eq $true) { 'PASS' } elseif ($r.unit_tests_ok -eq $false) { 'FAIL' } else { '?' }
+                Write-Host ("review: SHIPPED={0} PROPERTY={1} IDEA={2} unit_tests={3}" -f $r.shipped, $r.property, $r.idea, $tc) -ForegroundColor Yellow
+                if ($r.review_path) { Write-Host ("review: {0}" -f $r.review_path) }
+            }
             $metaPath = Join-Path (Get-WpaiImproveRuntimeDir) 'META.md'
             if (Test-Path $metaPath) { Write-Host ("meta: {0}" -f $metaPath) }
         } elseif ($sub -eq 'elite' -or $sub -eq 'elites') {
@@ -717,8 +724,25 @@ switch ($cmd) {
                 Write-Host ("NOT RELIABLE: outcomes={0} elites={1} bans={2}" -f $r.outcomes, $r.elites, $r.bans) -ForegroundColor Red
                 foreach ($iss in $r.issues) { Write-Host ("  - {0}" -f $iss) -ForegroundColor Red }
             }
+        } elseif ($sub -eq 'review') {
+            $skipT = $SkipTests -or ($map.ContainsKey('SkipTests') -and $map['SkipTests'])
+            $r = Invoke-WpaiImproveAutoReview -TopLeaders $(if ($Top -gt 0) { $Top } else { 12 }) -SkipTests:$skipT
+            Write-Host ("SELF-REVIEW: SHIPPED={0} PROPERTY={1} IDEA={2} KILLED={3}" -f $r.shipped, $r.property, $r.idea, $r.killed) -ForegroundColor Cyan
+            $tc = if ($r.unit_tests_ok -eq $true) { 'PASS' } elseif ($r.unit_tests_ok -eq $false) { 'FAIL' } else { 'skipped' }
+            Write-Host ("unit tests: {0} ({1}ms)" -f $tc, $r.unit_tests_ms)
+            Write-Host ("producing: {0}" -f $r.producing) -ForegroundColor Yellow
+            Write-Host ("report: {0}" -f $r.path)
+            # Print compact table
+            $r.rows | Where-Object { $_.scope -eq 'elite' } | ForEach-Object {
+                $col = switch ($_.kind) { 'SHIPPED' { 'Green' } 'KILLED' { 'Red' } 'PROPERTY' { 'DarkCyan' } default { 'DarkGray' } }
+                Write-Host ("  [{0}] {1}  {2}" -f $_.kind, $_.path_id, $_.class) -ForegroundColor $col
+            }
+            $ideas = @($r.rows | Where-Object { $_.scope -eq 'leader' -and $_.kind -eq 'IDEA' }).Count
+            if ($ideas -gt 0) {
+                Write-Host ("  ... {0} leader rows are IDEA (hypotheses, not ships)" -f $ideas) -ForegroundColor DarkGray
+            }
         } else {
-            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | self-inject | auto | unleash | status | outcomes | bans | learning | elite | purge | doctor'
+            throw 'improve sub: seed | generation | leaders | briefs | mutate | record | learn | run | self-inject | auto | unleash | status | outcomes | bans | learning | elite | purge | doctor | review'
         }
         break
     }
