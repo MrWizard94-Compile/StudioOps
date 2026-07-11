@@ -2,7 +2,7 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const forge = window.forge;
+const api = window.forge; // preload exposes window.forge; don't shadow that global name
 
 let opt = { limit: 8, selfOnly: true, top: 20, probe: 8 };
 let busy = false;
@@ -37,13 +37,13 @@ function setMetrics(s) {
 }
 
 async function refreshStatus() {
-  const s = await forge.status();
-  if (!s.ok) { log("status: " + s.error, "err"); return; }
+  const s = await api.status();
+  if (!s.ok) { log("status: " + (s.error || "unknown"), "err"); return; }
   setMetrics(s);
 }
 
 async function refreshElites() {
-  const r = await forge.elites();
+  const r = await api.elites();
   if (!r.ok) { log("elites: " + r.error, "err"); return; }
   $("forged-count").textContent = r.count;
   const box = $("forged");
@@ -127,7 +127,7 @@ async function ignite() {
   setBusy(true);
   pipeline(true);
   log(`Igniting swarm — ${opt.limit} candidates, self-only=${opt.selfOnly}. Falsifying locally…`);
-  const r = await forge.ignite(opt);
+  const r = await api.ignite(opt);
   if (!r.ok) { log("ignite: " + r.error, "err"); pipeline(false); setBusy(false); return; }
   pipelineDone();
   log(`Generation ${r.generation} · top score ${r.top_score}`, "ok");
@@ -147,7 +147,7 @@ async function runDoctor() {
   badge.className = "badge run"; badge.textContent = "CHECKING…";
   $("e-tests").textContent = "running…"; $("e-tests").className = "amber";
   log("Running reliability gate (real unit suite + property checks)…");
-  const r = await forge.doctor();
+  const r = await api.doctor();
   if (!r.ok) { log("doctor: " + r.error, "err"); badge.className = "badge bad"; badge.textContent = "ERROR"; setBusy(false); return; }
   badge.className = "badge " + (r.reliable ? "ok" : "bad");
   badge.textContent = r.reliable ? "RELIABLE" : "NOT RELIABLE";
@@ -164,7 +164,7 @@ async function runProps() {
   setBusy(true);
   $("e-props").textContent = "probing…"; $("e-props").className = "amber";
   log("Property probe — randomized falsification of core invariants…");
-  const r = await forge.properties();
+  const r = await api.properties();
   if (!r.ok) { log("properties: " + r.error, "err"); $("e-props").textContent = "error"; $("e-props").className = "red"; setBusy(false); return; }
   $("e-props").textContent = r.all_ok ? `${r.checked}/${r.checked} held` : `${r.failed.length} failed`;
   $("e-props").className = r.all_ok ? "ember" : "red";
@@ -184,7 +184,7 @@ function switchTab(which) {
 }
 
 function init() {
-  if (!forge) {
+  if (!api) {
     log("window.forge unavailable — run this inside the Electron app (npm start), not a browser.", "err");
     return;
   }

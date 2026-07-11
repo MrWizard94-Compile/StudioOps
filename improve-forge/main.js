@@ -81,6 +81,11 @@ function createWindow() {
     shell.openExternal(url);
     return { action: 'deny' };
   });
+  // Surface renderer console + load failures to the main process stdout (aids debugging).
+  win.webContents.on('console-message', (_e, _level, message) => console.log('[renderer] ' + message));
+  win.webContents.on('did-fail-load', (_e, code, desc, url) => console.log('[did-fail-load] ' + code + ' ' + desc + ' ' + url));
+  win.webContents.on('preload-error', (_e, p, err) => console.log('[preload-error] ' + p + ' :: ' + err.message));
+
   win.loadFile(path.join(APP_DIR, 'renderer', 'index.html'));
 }
 
