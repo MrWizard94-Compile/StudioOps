@@ -23,12 +23,14 @@ param(
     [switch]$DryRun,
     [switch]$Submit,
     [switch]$Force,
+    [switch]$WhatIf,
     [string]$Release,
     [string]$Job,
     [string]$ParentTaskIds,
     [int]$MaxRounds = 0,
     [double]$Budget = 0,
     [string]$Reason,
+    [int]$OlderThanDays = 0,
 
     [Parameter(ValueFromRemainingArguments = $true)]
     [string[]]$Rest
@@ -91,6 +93,8 @@ WPAI control plane (on-demand)
     wpai approve list [pending|approved|rejected]
     wpai approve show <id>
     wpai approve decide <id> approved|rejected [-Reason "..."]
+    wpai approve pending-ids
+    wpai approve purge-resolved [-OlderThanDays 7]
 
   MUSIC (package-ready; never auto-upload)
     wpai music check [-Release "Weaponized Mind"] [-EmitTicket]
@@ -294,7 +298,25 @@ switch ($cmd) {
             $reason = if ($Reason) { $Reason } elseif ($map.ContainsKey('Reason')) { [string]$map['Reason'] } else { '' }
             $t = Set-WpaiApprovalDecision -Id $id -Decision $dec -DenyReason $reason
             Write-Host ("{0} -> {1}" -f $t.id, $t.status) -ForegroundColor Green
-        } else { throw "unknown approve sub: $sub" }
+        } elseif ($sub -eq 'pending-ids') {
+            $ids = @(Get-WpaiPendingApprovalIds)
+            foreach ($id in $ids) { Write-Output $id }
+        } elseif ($sub -eq 'purge-resolved') {
+            $days = 7
+            if ($OlderThanDays -gt 0) { $days = $OlderThanDays }
+            elseif ($map.ContainsKey('OlderThanDays')) { $days = [int]$map['OlderThanDays'] }
+            elseif ($pos.Count -gt 0 -and $pos[0] -match '^\d+$') { $days = [int]$pos[0] }
+            $doWhatIf = [bool]$WhatIf -or $map.ContainsKey('WhatIf') -or $map.ContainsKey('whatif')
+            foreach ($ra in @($Rest)) {
+                if ([string]$ra -match '^(?i)-?WhatIf$') { $doWhatIf = $true }
+            }
+            $r = Remove-WpaiResolvedApprovals -OlderThanDays $days -WhatIf:$doWhatIf
+            Write-Output ("purge-resolved: deleted={0} skipped={1} older_than_days={2}" -f `
+                    $r.deleted_count, $r.skipped, $r.older_than_days)
+            if ($r.deleted_count -gt 0) {
+                $r.deleted | Format-Table id, status, action -AutoSize | Out-String | Write-Output
+            }
+        } else { throw "unknown approve sub: $sub (list|show|decide|pending-ids|purge-resolved)" }
         break
     }
     'music' {

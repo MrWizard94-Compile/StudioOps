@@ -128,6 +128,41 @@ Assert-True ($d1.Ticket.id -eq $d2.Ticket.id) 'dedupe reuses ticket id'
 $gate = Test-WpaiResearchAllowed
 Assert-True (-not $gate.ok) 'research blocked while dormant'
 
+# pending-ids: only pending ticket ids
+$pendTicket = New-WpaiApprovalTicket -Kind 'generic' -Summary ('pending-ids ' + [guid]::NewGuid().ToString('N').Substring(0, 8)) -AllowDuplicate
+$pendIds = @(Get-WpaiPendingApprovalIds)
+Assert-True ($pendIds -contains $pendTicket.Ticket.id) 'pending-ids includes new ticket'
+# CLI form: one id per line
+$cli = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
+$cliOut = & pwsh -NoProfile -File (Join-Path $cli 'wpai.ps1') approve pending-ids 2>$null
+$cliLines = @($cliOut | Where-Object { $_ -and [string]$_ -match '^appr-' })
+Assert-True ($cliLines -contains $pendTicket.Ticket.id) 'CLI pending-ids prints ticket id'
+
+# purge-resolved: never deletes pending; deletes old approved/rejected/expired
+$oldApproved = New-WpaiApprovalTicket -Kind 'generic' -Summary ('purge-old ' + [guid]::NewGuid().ToString('N').Substring(0, 8)) -AllowDuplicate
+Set-WpaiApprovalDecision -Id $oldApproved.Ticket.id -Decision 'approved' | Out-Null
+# Backdate decided_at so age exceeds cutoff
+$oldPath = $oldApproved.Path
+$oldObj = ConvertTo-WpaiHashtable (Read-WpaiJsonFile -Path $oldPath)
+$oldObj['decided_at'] = ([DateTime]::UtcNow.AddDays(-30)).ToString('o')
+$oldObj['requested_at'] = ([DateTime]::UtcNow.AddDays(-31)).ToString('o')
+Write-WpaiJsonAtomic -Path $oldPath -Object $oldObj
+$freshApproved = New-WpaiApprovalTicket -Kind 'generic' -Summary ('purge-fresh ' + [guid]::NewGuid().ToString('N').Substring(0, 8)) -AllowDuplicate
+Set-WpaiApprovalDecision -Id $freshApproved.Ticket.id -Decision 'approved' | Out-Null
+$pendingKeep = New-WpaiApprovalTicket -Kind 'generic' -Summary ('purge-pending ' + [guid]::NewGuid().ToString('N').Substring(0, 8)) -AllowDuplicate
+
+$purgeWhatIf = Remove-WpaiResolvedApprovals -OlderThanDays 7 -WhatIf
+Assert-True ($purgeWhatIf.deleted_count -ge 1) 'purge WhatIf finds old resolved'
+Assert-True (Test-Path $oldPath) 'WhatIf does not delete file'
+
+$purge = Remove-WpaiResolvedApprovals -OlderThanDays 7
+Assert-True ($purge.deleted_count -ge 1) 'purge deleted at least one'
+Assert-True (-not (Test-Path $oldPath)) 'old approved ticket file removed'
+Assert-True (Test-Path $freshApproved.Path) 'fresh approved kept (< 7 days)'
+Assert-True (Test-Path $pendingKeep.Path) 'pending never purged'
+$stillPending = @(Get-WpaiPendingApprovalIds)
+Assert-True ($stillPending -contains $pendingKeep.Ticket.id) 'pending-ids still lists keep ticket'
+
 # Bus archive dry (may no-op if small)
 $arch = Invoke-WpaiBusArchive -KeepLines 100000
 Assert-True ($null -ne $arch) 'bus archive returns object'

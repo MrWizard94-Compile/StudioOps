@@ -605,6 +605,92 @@ function Register-WpaiPendingApproval {
     } | Out-Null
 }
 
+function Get-WpaiPendingApprovalIds {
+    <#
+    .SYNOPSIS
+      Pending approval ticket ids only (one per line when written to host/pipeline).
+    #>
+    $ids = @(Get-WpaiApprovalTickets -Status 'pending' | ForEach-Object { [string]$_.id } | Where-Object { $_ })
+    return $ids
+}
+
+function Remove-WpaiResolvedApprovals {
+    <#
+    .SYNOPSIS
+      Delete approved/rejected/expired ticket files older than N days (default 7).
+      Never deletes pending tickets. No network.
+    #>
+    param(
+        [int]$OlderThanDays = 7,
+        [switch]$WhatIf
+    )
+    if ($OlderThanDays -lt 0) { throw 'OlderThanDays must be >= 0' }
+    Ensure-WpaiRuntime | Out-Null
+    $cutoff = [DateTime]::UtcNow.AddDays(-1 * $OlderThanDays)
+    $resolved = @('approved', 'rejected', 'expired')
+    $deleted = [System.Collections.Generic.List[object]]::new()
+    $skipped = 0
+    foreach ($row in @(Get-WpaiApprovalTickets)) {
+        $st = [string]$row.status
+        if ($st -notin $resolved) {
+            $skipped++
+            continue
+        }
+        $t = $row.ticket
+        $stamp = $null
+        foreach ($field in @('decided_at', 'expires_at', 'requested_at')) {
+            $raw = $null
+            try { $raw = [string]$t.$field } catch { $raw = $null }
+            if ([string]::IsNullOrWhiteSpace($raw)) { continue }
+            try {
+                $stamp = [DateTime]::Parse($raw).ToUniversalTime()
+                break
+            } catch { continue }
+        }
+        if ($null -eq $stamp) {
+            try {
+                $stamp = (Get-Item -LiteralPath $row.path).LastWriteTimeUtc
+            } catch {
+                $skipped++
+                continue
+            }
+        }
+        if ($stamp -gt $cutoff) {
+            $skipped++
+            continue
+        }
+        if ($WhatIf) {
+            $deleted.Add([pscustomobject]@{
+                    id     = $row.id
+                    status = $st
+                    path   = $row.path
+                    age_ts = $stamp.ToString('o')
+                    action = 'would_delete'
+                }) | Out-Null
+            continue
+        }
+        try {
+            Remove-Item -LiteralPath $row.path -Force
+            $deleted.Add([pscustomobject]@{
+                    id     = $row.id
+                    status = $st
+                    path   = $row.path
+                    age_ts = $stamp.ToString('o')
+                    action = 'deleted'
+                }) | Out-Null
+        } catch {
+            $skipped++
+        }
+    }
+    return [pscustomobject]@{
+        older_than_days = $OlderThanDays
+        cutoff_utc      = $cutoff.ToString('o')
+        deleted_count   = $deleted.Count
+        skipped         = $skipped
+        deleted         = @($deleted)
+    }
+}
+
 function Get-WpaiPromotionCandidates {
     param([int]$WindowDays = 90, [int]$Threshold = 3)
     $bb = Get-WpaiBlackboard
