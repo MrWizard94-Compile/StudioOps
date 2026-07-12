@@ -96,7 +96,14 @@ ipcMain.handle('forge:ignite', (_e, opts) => runBridge('ignite', opts || {}));
 ipcMain.handle('forge:system', () => runBridge('system'));
 ipcMain.handle('forge:files', (_e, opts) => runBridge('files', opts || {}));
 ipcMain.handle('forge:filecontent', (_e, opts) => runBridge('filecontent', opts || {}));
-ipcMain.handle('forge:crawl', (_e, opts) => runBridge('crawl', opts || {}));
+ipcMain.handle('forge:crawl', async (_e, opts) => {
+  const emit = (s) => { try { _e.sender.send('forge:stage', { op: 'crawl', ...s }); } catch (err) {} };
+  emit({ stage: 'crawling', detail: 'GitHub REST API — license allow-list + secret filter' });
+  const r = await runBridge('crawl', opts || {});
+  if (r && r.ok) emit({ stage: 'seeded', detail: `${r.kept} kept / ${r.seeded} seeded into Smart-Library` });
+  emit({ stage: 'done', detail: 'crawl complete' });
+  return r;
+});
 
 // --- Node-native code-forge pillar (local Ollama generate + Docker falsify + apply) ---
 
@@ -112,7 +119,8 @@ ipcMain.handle('forge:forge', async (_e, opts) => {
     const ext = path.extname(abs).replace('.', '').toLowerCase() || 'ts';
     const instruction = opts.instruction ||
       'Improve clarity and robustness and fix any latent bugs, without changing public behavior or exports.';
-    const r = await codeforge.forgeOne(content, instruction, ext);
+    const emit = (s) => { try { _e.sender.send('forge:stage', { op: 'forge', ...s }); } catch (err) {} };
+    const r = await codeforge.forgeOne(content, instruction, ext, emit);
     const wl = janusWorkloadFor(abs);
     return { ok: true, path: opts.path, ext, original: content, workload: wl ? wl.id : null, ...r };
   } catch (e) {

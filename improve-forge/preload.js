@@ -17,4 +17,10 @@ contextBridge.exposeInMainWorld('forge', {
   forge: (opts) => ipcRenderer.invoke('forge:forge', opts),
   apply: (opts) => ipcRenderer.invoke('forge:apply', opts),
   restore: (opts) => ipcRenderer.invoke('forge:restore', opts),
+  // Subscribe to real forge/crawl milestone events; returns an unsubscribe fn.
+  onStage: (cb) => {
+    const h = (_e, data) => cb(data);
+    ipcRenderer.on('forge:stage', h);
+    return () => ipcRenderer.removeListener('forge:stage', h);
+  },
 });

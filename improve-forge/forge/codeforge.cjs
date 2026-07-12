@@ -132,11 +132,17 @@ function restoreBackup(filePath) {
   return { ok: true };
 }
 
-// Orchestrate one candidate: generate -> falsify.
-async function forgeOne(fileContent, instruction, ext = "ts") {
+// Orchestrate one candidate: generate -> falsify. `onProgress(stage)` is called with the
+// real milestones (generating / generated / falsifying / verdict) so a UI pipeline can
+// reflect actual phases instead of a timed animation.
+async function forgeOne(fileContent, instruction, ext = "ts", onProgress = () => {}) {
+  onProgress({ stage: "generating", detail: `local Ollama (${OLLAMA.model})` });
   const gen = await generateCandidate(fileContent, instruction, ext);
+  onProgress({ stage: "generated", detail: `${gen.code.length} chars in ${gen.gen_ms}ms`, gen_ms: gen.gen_ms });
+  onProgress({ stage: "falsifying", detail: `Docker sandbox (.${ext})` });
   const verdict = await falsifyInSandbox(gen.code, ext);
   const v = verdict.ok === true ? "FORGED" : verdict.ok === false ? "INCINERATED" : "INCONCLUSIVE";
+  onProgress({ stage: "verdict", detail: v, verdict: v });
   return {
     code: gen.code, model: gen.model, gen_ms: gen.gen_ms,
     forged: verdict.ok === true, // real: compiles/parses clean in the sandbox

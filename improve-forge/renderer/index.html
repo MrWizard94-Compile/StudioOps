@@ -8,25 +8,23 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <!-- Scanline overlay -->
     <div class="scanlines" aria-hidden="true"></div>
-    <!-- Active sweep -->
     <div id="sweep" class="sweep" aria-hidden="true"></div>
 
+    <!-- Header -->
     <header class="hdr">
       <div class="brand">
         <div class="flame">△</div>
         <div>
-          <h1 id="title" class="glitch" data-text="HELL-FORGE SWARM">HELL-FORGE SWARM<span class="ver">LOCAL v1.0</span></h1>
-          <p class="tag">Local self-improvement forge · <strong>no API</strong> · real falsification</p>
+          <h1 id="title" class="glitch" data-text="HELL-FORGE SWARM">HELL-FORGE SWARM<span class="ver">LOCAL v2.1</span></h1>
+          <p class="tag">Unified local forge · crawler · swarm · code-forge · <strong>no API</strong> · real falsification</p>
         </div>
       </div>
       <div class="metrics">
         <div class="metric"><span class="ml">OUTCOMES</span><span id="m-outcomes" class="mv">—</span></div>
         <div class="metric"><span class="ml">ELITES</span><span id="m-elites" class="mv ember">—</span></div>
-        <div class="metric"><span class="ml">BANS</span><span id="m-bans" class="mv amber">—</span></div>
         <div class="metric"><span class="ml">KILLS</span><span id="m-kills" class="mv red">—</span></div>
-        <div class="metric"><span class="ml">GEN</span><span id="m-gen" class="mv">—</span></div>
+        <div class="metric"><span class="ml">GENOME</span><span id="m-genome" class="mv">—</span></div>
         <div class="reliab"><span class="ml">RELIABILITY</span><span id="m-reliable" class="badge unknown">UNVERIFIED</span></div>
       </div>
     </header>
@@ -43,95 +41,119 @@
       <button id="eng-refresh" class="eng-refresh" title="Re-probe all engines">⟳</button>
     </div>
 
+    <!-- Tabs -->
     <nav class="tabs">
-      <button id="tab-crucible" class="tab active">◈ Crucible</button>
+      <button id="tab-crucible" class="tab active">◈ Crucible Compiler</button>
       <button id="tab-forged" class="tab">✦ Forged Artifacts <span id="forged-count" class="chip">0</span></button>
-      <span class="focus">Target focus: <em>recursive self-improvement engine</em></span>
+      <span class="focus">Target focus: <em>recursive self-improvement pipeline</em></span>
     </nav>
 
     <main class="grid">
-      <!-- CRUCIBLE -->
-      <section id="view-crucible" class="view">
+      <!-- ================= CRUCIBLE ================= -->
+      <section id="view-crucible" class="view two-col">
+        <!-- LEFT COLUMN -->
         <div class="col-left">
+          <!-- Workspace explorer -->
           <div class="card">
-            <div class="card-h">◆ Forge Controls</div>
+            <div class="card-h">◆ Workspace Directory <span id="ws-root" class="tiny dim"></span></div>
             <div class="card-b">
-              <button id="btn-ignite" class="btn primary">▶ Ignite Swarm</button>
-              <div class="row">
-                <label class="toggle"><input type="checkbox" id="opt-selfonly" checked /> Self-only (target the engine)</label>
-              </div>
-              <div class="row">
-                <span class="lbl">Candidates / wave</span>
-                <div class="stepper">
-                  <button id="lim-dn">−</button><span id="opt-limit">8</span><button id="lim-up">+</button>
-                </div>
-              </div>
-              <div class="split">
-                <button id="btn-doctor" class="btn ghost">✚ Run Doctor</button>
-                <button id="btn-props" class="btn ghost">⚑ Property Probe</button>
-              </div>
-              <p class="hint">Every candidate is falsified by the local engine — measured <b>SUPPORTED</b>, <b>KILLED</b> (with counterexample), or <b>INCONCLUSIVE</b>. Nothing is simulated. No key required.</p>
+              <div id="filelist" class="filelist"><div class="empty">Loading workspace…</div></div>
             </div>
           </div>
 
+          <!-- Forge controls -->
           <div class="card">
-            <div class="card-h">◇ Engine</div>
-            <div class="card-b mono small">
-              <div class="kv"><span>catalog paths</span><span id="e-catalog">—</span></div>
-              <div class="kv"><span>generation</span><span id="e-gen">—</span></div>
-              <div class="kv"><span>experiments</span><span id="e-exp">—</span></div>
-              <div class="kv"><span>property probe</span><span id="e-props" class="dim">idle</span></div>
-              <div class="kv"><span>unit suite</span><span id="e-tests" class="dim">—</span></div>
+            <div class="card-h">◇ Forge Controls</div>
+            <div class="card-b">
+              <label class="lbl2" for="instruction">Instruction (what to forge on the selected file)</label>
+              <textarea id="instruction" class="instruction" rows="3" placeholder="e.g. add strict input validation and fix latent bugs without changing public behavior"></textarea>
+              <button id="btn-forge" class="btn primary" disabled>▶ Ignite File</button>
+              <div class="split">
+                <button id="btn-restore" class="btn ghost" disabled>↶ Restore Backup</button>
+                <button id="btn-ignite" class="btn ghost">✷ Ignite Swarm Wave</button>
+              </div>
+              <div class="split">
+                <button id="btn-doctor" class="btn ghost">✚ Doctor</button>
+                <button id="btn-props" class="btn ghost">⚑ Properties</button>
+              </div>
+              <p class="hint">Candidates are generated by local <b>Ollama</b> and falsified by real compile in a <b>Docker</b> sandbox — <b>FORGED</b>, <b>INCINERATED</b> (with log), or <b>INCONCLUSIVE</b>. Registered Janus workloads apply only via the validation-receipt gate.</p>
+            </div>
+          </div>
+
+          <!-- Crawled open-source bits -->
+          <div class="card">
+            <div class="card-h">⑂ Crawled Open-Source Bits <button id="btn-crawl" class="mini">⟳ Crawl</button></div>
+            <div class="card-b">
+              <div id="crawled" class="crawled"><div class="empty">No crawl yet. Run a crawl to harvest license-clean code into Smart-Library.</div></div>
             </div>
           </div>
         </div>
 
+        <!-- RIGHT COLUMN -->
         <div class="col-right">
-          <div id="pipeline" class="card hidden">
+          <!-- Pipeline -->
+          <div id="pipeline" class="card">
             <div class="card-h">▲ Forge State: <span id="pl-state">idle</span> <span id="pl-pct" class="pct">0%</span></div>
             <div class="card-b">
               <div class="bar"><div id="pl-bar" class="bar-fill"></div></div>
               <div class="stages">
-                <div class="stage" data-k="score"><i></i><span>Score</span></div>
+                <div class="stage" data-k="scan"><i></i><span>Scan</span></div>
+                <div class="stage" data-k="crawl"><i></i><span>Crawl</span></div>
                 <div class="stage" data-k="swarm"><i></i><span>Swarm</span></div>
                 <div class="stage" data-k="falsify"><i></i><span>Falsify</span></div>
-                <div class="stage" data-k="learn"><i></i><span>Learn</span></div>
+                <div class="stage" data-k="refine"><i></i><span>Refine</span></div>
                 <div class="stage" data-k="forged"><i></i><span>Forged</span></div>
               </div>
             </div>
           </div>
 
+          <!-- Console -->
           <div class="card">
-            <div class="card-h">▮ Console</div>
+            <div class="card-h">▮ Sandbox Console</div>
             <div id="console" class="console">
-              <div class="log dim">Console idle. Ignite the swarm to run a real falsification wave.</div>
+              <div class="log dim">Console idle. Select a file and Ignite, or run a Crawl.</div>
             </div>
           </div>
 
-          <div class="card">
-            <div class="card-h">◱ Furnace Verdicts <span id="cand-count" class="chip">0</span></div>
-            <div id="candidates" class="candidates">
-              <div class="empty">No candidates yet. Ignite a wave.</div>
+          <!-- Inspector / File reader -->
+          <div class="card grow">
+            <div class="card-h">
+              <span id="insp-title">◱ Live File Reader</span>
+              <span id="insp-views" class="views hidden">
+                <button id="v-code" class="vtab active">Code</button>
+                <button id="v-diff" class="vtab">Diff</button>
+                <button id="v-tests" class="vtab">Tests</button>
+              </span>
+            </div>
+            <div class="card-b">
+              <div id="insp-meta" class="insp-meta hidden"></div>
+              <div id="insp-body" class="insp-body"><div class="empty">Select a file from the workspace to view it.</div></div>
+              <div id="apply-row" class="apply-row hidden">
+                <button id="btn-apply" class="btn primary">✓ Apply &amp; Backup</button>
+                <span id="apply-msg" class="apply-msg"></span>
+              </div>
             </div>
           </div>
         </div>
       </section>
 
-      <!-- FORGED ARTIFACTS -->
+      <!-- ================= FORGED ARTIFACTS ================= -->
       <section id="view-forged" class="view hidden">
         <div class="card wide">
-          <div class="card-h">✦ Forged Optimizations Catalog — survivors of real falsification</div>
-          <div id="forged" class="forged">
-            <div class="empty">Loading elites…</div>
-          </div>
+          <div class="card-h">✦ Forged Optimizations — swarm elites (survivors of real falsification)</div>
+          <div id="forged" class="forged"><div class="empty">Loading elites…</div></div>
+        </div>
+        <div class="card wide">
+          <div class="card-h">🧬 Banked Solutions — deep_research genome <span id="genome-badge" class="tiny dim"></span></div>
+          <div id="solutions" class="forged"><div class="empty">Loading solutions…</div></div>
         </div>
       </section>
     </main>
 
     <footer class="ftr">
-      <span><span class="dot"></span> engine: local pwsh</span>
-      <span>recursive mode: <b class="ember">enabled</b></span>
-      <span>source: <b>WPAI improve-swarm</b> · no telemetry · no API</span>
+      <span><span class="dot"></span> engine: local pwsh + node</span>
+      <span>mutation gate: <b class="ember">Janus receipts</b></span>
+      <span>source: <b>WPAI unified Hell Forge</b> · no telemetry · no API</span>
     </footer>
 
     <script src="app.js"></script>
