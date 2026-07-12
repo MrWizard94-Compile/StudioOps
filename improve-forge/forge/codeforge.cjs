@@ -89,10 +89,10 @@ function sandboxProfile(ext) {
   const e = String(ext || "").toLowerCase();
   if (e === "ts")
     return { image: "node:20-alpine", file: "candidate.ts", npm: true,
-      shell: "npx -y typescript@5 tsc --noEmit --strict --skipLibCheck candidate.ts" };
+      shell: "npx -y -p typescript@5 tsc --noEmit --strict --skipLibCheck candidate.ts" };
   if (e === "tsx" || e === "jsx")
     return { image: "node:20-alpine", file: "candidate." + e, npm: true,
-      shell: `npx -y typescript@5 tsc --noEmit --strict --skipLibCheck --jsx react-jsx candidate.${e}` };
+      shell: `npx -y -p typescript@5 tsc --noEmit --strict --skipLibCheck --jsx react-jsx candidate.${e}` };
   if (e === "js" || e === "cjs" || e === "mjs")
     return { image: "node:20-alpine", file: "candidate." + e, npm: false,
       shell: `node --check candidate.${e}` };

@@ -33,7 +33,7 @@ for (const a of argv) {
   if (a.startsWith("--only=")) opt.only = a.slice(7).split(",").map((s) => s.trim());
   if (a.startsWith("--skip=")) opt.skip = a.slice(7).split(",").map((s) => s.trim());
 }
-if (opt.fast) opt.skip.push("forge-generate", "crawl");
+if (opt.fast) opt.skip.push("forge-generate", "crawl", "swarm", "falsify-ts", "falsify-py", "deep");
 const sectionEnabled = (s) => (!opt.only || opt.only.includes(s)) && !opt.skip.includes(s);
 
 // ---- tiny test framework ----
@@ -131,6 +131,10 @@ async function run() {
     const r = bridge("solutions");
     return { ok: r.ok && Array.isArray(r.solutions), detail: "genome v" + r.genome_version + " · " + r.count + " solutions" };
   });
+  await check("status: fast metrics", () => {
+    const r = bridge("status");
+    return { ok: r.ok && typeof r.outcomes === "number" && typeof r.generation_max === "number", detail: `outcomes ${r.outcomes} · elites ${r.elites} · gen ${r.generation_max}` };
+  });
 
   // ---- janus workload boundary ----
   section("janus");
@@ -141,6 +145,36 @@ async function run() {
   await check("workload detection: app's own file → unregistered", () => {
     const wl = janusjob.janusWorkloadFor(path.join(APP_DIR, "main.js"));
     return { ok: wl === null, detail: wl ? "WRONGLY matched " + wl.id : "unregistered (safe backup)" };
+  });
+  await check("stageJanusJob: generates a real, correct Janus job", () => {
+    const target = "C:\\WPAI\\Minecraft\\Mods-1.20.1-Forge\\Node Core\\src\\main\\java\\Node.java";
+    const wl = janusjob.janusWorkloadFor(target);
+    const tmp = path.join(os.tmpdir(), "hfs-jj-" + Date.now());
+    const r = janusjob.stageJanusJob(wl, target, "class Node {}", "self-check", tmp);
+    let planOk = false;
+    try {
+      const plan = JSON.parse(fs.readFileSync(path.join(r.jobDir, "plan.json"), "utf8"));
+      planOk = plan.children[0].task.workload === "nodecore" && plan.parent.validation_profile === "forge-mod-v1" &&
+        plan.children[0].task.spec.files_in_scope[0] === "src/main/java/Node.java" &&
+        fs.existsSync(path.join(r.jobDir, "INSTRUCTIONS.md"));
+    } catch (e) { /* planOk stays false */ }
+    try { fs.rmSync(tmp, { recursive: true, force: true }); } catch (e) {}
+    return { ok: r.staged && planOk && r.rel === "src/main/java/Node.java", detail: `${r.workload} · rel ${r.rel} · plan ${planOk ? "ok" : "BAD"}` };
+  });
+
+  // ---- apply / restore (non-destructive: temp file only) ----
+  section("apply");
+  await check("applyWithBackup + restoreBackup round-trip", () => {
+    const f = path.join(os.tmpdir(), "hfs-apply-" + Date.now() + ".txt");
+    fs.writeFileSync(f, "ORIGINAL\n");
+    const ap = codeforge.applyWithBackup(f, "MODIFIED\n");
+    const applied = fs.readFileSync(f, "utf8") === "MODIFIED\n";
+    const bakOk = fs.existsSync(f + ".bak") && fs.readFileSync(f + ".bak", "utf8") === "ORIGINAL\n";
+    const re = codeforge.restoreBackup(f);
+    const restored = fs.readFileSync(f, "utf8") === "ORIGINAL\n";
+    const bakGone = !fs.existsSync(f + ".bak");
+    try { fs.rmSync(f, { force: true }); } catch (e) {}
+    return { ok: ap.ok && applied && bakOk && re.ok && restored && bakGone, detail: `applied ${applied} · backup ${bakOk} · restored ${restored} · bak-cleaned ${bakGone}` };
   });
 
   // ---- the falsifier must DISCRIMINATE (this is the anti-theater check) ----
@@ -156,6 +190,26 @@ async function run() {
   await check("unsupported language → INCONCLUSIVE (never fake-pass)", async () => {
     const r = await codeforge.falsifyInSandbox("SELECT 1;", "sql");
     return { ok: r.ok === null, detail: "verdict ok=" + r.ok + " (" + r.stage + ")" };
+  });
+
+  section("falsify-ts");
+  await check("TS: clean strict types → FORGED", async () => {
+    const r = await codeforge.falsifyInSandbox("export const add = (a: number, b: number): number => a + b;\n", "ts", { timeoutMs: 200000 });
+    return { ok: r.ok === true, detail: "ok=" + r.ok + " exit=" + r.exit };
+  });
+  await check("TS: real type error → INCINERATED", async () => {
+    const r = await codeforge.falsifyInSandbox("export const add = (a: number, b: number): string => a + b;\n", "ts", { timeoutMs: 200000 });
+    return { ok: r.ok === false, detail: r.ok === false ? "rejected: " + (r.log || "").split("\n")[0].slice(0, 60) : "MISSED a type error!" };
+  });
+
+  section("falsify-py");
+  await check("PY: valid syntax → FORGED", async () => {
+    const r = await codeforge.falsifyInSandbox("def add(a, b):\n    return a + b\n", "py", { timeoutMs: 150000 });
+    return { ok: r.ok === true, detail: "ok=" + r.ok + " exit=" + r.exit };
+  });
+  await check("PY: syntax error → INCINERATED", async () => {
+    const r = await codeforge.falsifyInSandbox("def add(a, b):\n    return a +\n", "py", { timeoutMs: 150000 });
+    return { ok: r.ok === false, detail: r.ok === false ? "rejected: " + (r.log || "").split("\n").pop().slice(0, 60) : "MISSED a syntax error!" };
   });
 
   // ---- smart-library seed → query round-trip (proves the memory loop) ----
@@ -202,6 +256,44 @@ async function run() {
     const wellFormed = bits.length > 0 && bits.every((b) => b.repo && b.url && b.license !== undefined && typeof b.is_new === "boolean");
     const hasMeta = typeof r.new_this_run === "number" && typeof r.mode === "string";
     return { ok: r.ok && wellFormed && hasMeta, detail: `${r.mode} · harvested ${r.harvested} · new ${r.new_this_run} · seeded ${r.seeded} · ${bits.length} bits` };
+  });
+
+  // ---- swarm (self-improvement engine) ----
+  section("swarm");
+  await check("doctor: reliability gate runs (unit suite + property checks)", () => {
+    const r = bridge("doctor");
+    return { ok: r.ok && typeof r.reliable === "boolean" && (r.unit_tests_ok === true || r.unit_tests_ok === false || r.unit_tests_ok === null), detail: (r.reliable ? "RELIABLE" : "not reliable") + " · unit tests " + r.unit_tests_ok };
+  });
+  await check("ignite: swarm wave yields measured verdicts", () => {
+    const r = bridge("ignite", ["-Limit", "6", "-SelfOnly"]);
+    const total = (r.supported || 0) + (r.killed || 0) + (r.inconclusive || 0);
+    return { ok: r.ok && typeof r.generation === "number" && typeof r.attempted === "number" && total <= r.attempted, detail: `gen ${r.generation} · ${r.supported}✓/${r.killed}✗/${r.inconclusive}? of ${r.attempted}` };
+  });
+
+  // ---- deep_research launch (bounded: start → stream → stop) ----
+  section("deep");
+  await check("deep_research launches, streams, and stops", async () => {
+    const DRE = "C:\\WPAI\\AI-Research\\deep_research_engine";
+    if (!fs.existsSync(path.join(DRE, "main.py"))) return { ok: false, detail: "main.py missing" };
+    const { spawn } = require("child_process");
+    const proc = spawn("python", ["-u", "main.py"], {
+      cwd: DRE,
+      env: { ...process.env, META_GENERATIONS: "1", PYTHONUNBUFFERED: "1", PYTHONIOENCODING: "utf-8" },
+    });
+    let out = "", started = false;
+    await new Promise((resolve) => {
+      const timer = setTimeout(resolve, 25000);
+      const onData = (d) => {
+        out += d.toString();
+        if (/RESEARCH ENGINE|Pre-Mortem|Querying Local Ollama/i.test(out)) { started = true; clearTimeout(timer); resolve(); }
+      };
+      proc.stdout.on("data", onData);
+      proc.stderr.on("data", onData);
+      proc.on("error", () => { clearTimeout(timer); resolve(); });
+    });
+    try { proc.kill("SIGKILL"); } catch (e) {}
+    try { fs.rmSync(path.join(DRE, "workspace", ".engine.lock"), { force: true }); } catch (e) {} // clear stale single-instance lock
+    return { ok: started, detail: started ? "boot streamed, SIGKILL-stopped, lock cleared" : "no engine output in 25s" };
   });
 
   // ---- summary ----
