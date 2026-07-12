@@ -220,14 +220,18 @@ async function run() {
     return { ok: r.ok && r.json && r.json.status === "ok", detail: r.json ? r.json.status : "unreachable" };
   });
   await check("seed → query round-trip (real read-back)", async () => {
-    const content = `Distinctive self-check pattern ${marker}: use a token bucket with monotonic clock for rate limiting.`;
+    // Use a semantically DISTINCTIVE phrase so retrieval isn't outranked by similar corpus docs.
+    // (Embedding search ranks by meaning; a common topic like "rate limiter" has many neighbors,
+    // so a brand-new doc on it may not reach the top-k. A unique nonsense token has no competition.)
+    const phrase = `quicksilver-marmot-cryptogram-${marker}`;
+    const content = `Harness sentinel ${phrase}: a unique nonsense token used to verify seed-then-retrieve.`;
     const seed = await http("POST", SMARTLIB + "/seed", { content, category: "SelfCheck", language: "Python" });
     if (!seed.ok) return { ok: false, detail: "seed failed HTTP " + seed.status };
     // retrieval-only endpoint (fast, no LLM synthesis)
-    const q = await http("POST", SMARTLIB + "/query/context", { query: "token bucket rate limiting " + marker, limit: 5, max_chars: 4000 });
+    const q = await http("POST", SMARTLIB + "/query/context", { query: phrase, limit: 5, max_chars: 4000 });
     const slices = (q.json && q.json.slices) || [];
-    const found = slices.some((s) => s.includes(marker));
-    return { ok: q.ok && found, detail: found ? "retrieved the seeded marker" : slices.length + " slices, marker not found" };
+    const found = slices.some((s) => s.includes(phrase));
+    return { ok: q.ok && found, detail: found ? "retrieved the sentinel" : slices.length + " slices, sentinel not found" };
   });
   await check("code-forge getMemoryRefs pulls relevant crawled code", async () => {
     // Exact ranking of a brand-new doc among the corpus is non-deterministic (embeddings), and
