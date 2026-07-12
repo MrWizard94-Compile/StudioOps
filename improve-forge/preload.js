@@ -8,5 +8,13 @@ contextBridge.exposeInMainWorld('forge', {
   doctor: () => ipcRenderer.invoke('forge:doctor'),
   properties: () => ipcRenderer.invoke('forge:properties'),
   elites: () => ipcRenderer.invoke('forge:elites'),
+  solutions: () => ipcRenderer.invoke('forge:solutions'),
   ignite: (opts) => ipcRenderer.invoke('forge:ignite', opts),
+  system: () => ipcRenderer.invoke('forge:system'),
+  files: (opts) => ipcRenderer.invoke('forge:files', opts),
+  fileContent: (opts) => ipcRenderer.invoke('forge:filecontent', opts),
+  crawl: (opts) => ipcRenderer.invoke('forge:crawl', opts),
+  forge: (opts) => ipcRenderer.invoke('forge:forge', opts),
+  apply: (opts) => ipcRenderer.invoke('forge:apply', opts),
+  restore: (opts) => ipcRenderer.invoke('forge:restore', opts),
 });

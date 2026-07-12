@@ -31,6 +31,18 @@
       </div>
     </header>
 
+    <!-- Real engine telemetry — every light is measured, never simulated -->
+    <div id="engines" class="engines">
+      <span class="eng-label">ENGINES</span>
+      <span class="eng" id="eng-docker" data-k="docker"><span class="dot"></span>DOCKER<span class="eng-v">—</span></span>
+      <span class="eng" id="eng-ollama" data-k="ollama"><span class="dot"></span>OLLAMA<span class="eng-v">—</span></span>
+      <span class="eng" id="eng-janus" data-k="janus"><span class="dot"></span>JANUS<span class="eng-v">—</span></span>
+      <span class="eng" id="eng-smartlib" data-k="smartlib"><span class="dot"></span>SMART-LIB<span class="eng-v">—</span></span>
+      <span class="eng" id="eng-dre" data-k="dre"><span class="dot"></span>DEEP-RESEARCH<span class="eng-v">—</span></span>
+      <span class="eng" id="eng-swarm" data-k="swarm"><span class="dot"></span>SWARM<span class="eng-v">—</span></span>
+      <button id="eng-refresh" class="eng-refresh" title="Re-probe all engines">⟳</button>
+    </div>
+
     <nav class="tabs">
       <button id="tab-crucible" class="tab active">◈ Crucible</button>
       <button id="tab-forged" class="tab">✦ Forged Artifacts <span id="forged-count" class="chip">0</span></button>

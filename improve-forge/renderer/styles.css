@@ -69,6 +69,36 @@ h1 {
 .tag { margin: 3px 0 0; font: 10px var(--mono); letter-spacing: 0.14em; text-transform: uppercase; color: var(--dim); }
 .tag strong { color: var(--ember); }
 
+/* Real engine telemetry strip */
+.engines {
+  display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+  padding: 8px 22px; border-bottom: 1px solid var(--line);
+  background: rgba(19,19,22,0.55); font: 10px var(--mono); letter-spacing: 0.1em;
+}
+.engines .eng-label { color: var(--dim); text-transform: uppercase; letter-spacing: 0.22em; }
+.eng {
+  display: inline-flex; align-items: center; gap: 6px; text-transform: uppercase;
+  color: var(--dim); padding: 3px 9px; border: 1px solid var(--line); border-radius: 5px;
+  background: rgba(9,9,11,0.5);
+}
+.eng .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--dim); box-shadow: none; }
+.eng .eng-v { color: var(--ink); font-weight: 600; }
+.eng.ok { color: var(--ink); border-color: rgba(34,197,94,0.35); }
+.eng.ok .dot { background: var(--green); box-shadow: 0 0 8px rgba(34,197,94,0.7); }
+.eng.warn { color: var(--ink); border-color: rgba(245,158,11,0.4); }
+.eng.warn .dot { background: var(--amber); box-shadow: 0 0 8px rgba(245,158,11,0.7); }
+.eng.down { color: var(--dim); border-color: rgba(239,68,68,0.35); }
+.eng.down .dot { background: var(--red); box-shadow: 0 0 7px rgba(239,68,68,0.6); }
+.eng.down .eng-v { color: var(--red); }
+.eng-refresh {
+  margin-left: auto; background: rgba(9,9,11,0.6); color: var(--dim);
+  border: 1px solid var(--line); border-radius: 5px; width: 24px; height: 22px;
+  cursor: pointer; font-size: 12px; line-height: 1;
+}
+.eng-refresh:hover { color: var(--ember); border-color: rgba(249,115,22,0.4); }
+.eng-refresh.spin { animation: engspin 0.8s linear infinite; }
+@keyframes engspin { to { transform: rotate(360deg); } }
+
 .metrics { display: flex; align-items: center; gap: 22px; flex-wrap: wrap; }
 .metric, .reliab { display: flex; flex-direction: column; align-items: flex-end; }
 .ml { font: 700 9px var(--mono); letter-spacing: 0.12em; color: var(--dim); text-transform: uppercase; }

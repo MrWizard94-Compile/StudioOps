@@ -42,6 +42,52 @@ async function refreshStatus() {
   setMetrics(s);
 }
 
+/* ---------- real engine telemetry (no simulated numbers) ---------- */
+function setEng(id, state, val) {
+  const el = $(id);
+  if (!el) return;
+  el.classList.remove("ok", "warn", "down");
+  el.classList.add(state);
+  el.querySelector(".eng-v").textContent = val;
+}
+
+async function refreshSystem() {
+  const btn = $("eng-refresh");
+  if (btn) btn.classList.add("spin");
+  try {
+    const s = await api.system();
+    if (!s || !s.ok) { log("engine telemetry unavailable: " + ((s && s.error) || "unknown"), "warn"); return; }
+
+    const dc = s.docker || {};
+    setEng("eng-docker", dc.up ? "ok" : "down", dc.up ? ("v" + (dc.version || "?")) : "down");
+
+    const ol = s.ollama || {};
+    setEng("eng-ollama", ol.up ? (ol.code_model ? "ok" : "warn") : "down",
+      ol.up ? ((ol.models ? ol.models.length : 0) + " models") : "down");
+
+    const jn = s.janus || {};
+    // Orchestrator up but its memory/cognition containers down = warn, not down.
+    const janusState = !jn.up ? "down" : (jn.memory === "ok" ? "ok" : "warn");
+    setEng("eng-janus", janusState, jn.up ? (jn.tasks_accepted + "/" + jn.tasks_total + " tasks") : "down");
+
+    const sl = s.smart_library || {};
+    setEng("eng-smartlib", sl.up ? "ok" : "down", sl.up ? "ok" : (sl.status || "down"));
+
+    const dr = s.deep_research || {};
+    setEng("eng-dre", dr.present ? "ok" : "down",
+      dr.present ? ("v" + dr.genome_version + " · " + dr.solutions + " sol") : "absent");
+
+    const sw = s.swarm || {};
+    setEng("eng-swarm", sw.outcomes > 0 ? "ok" : "warn", sw.outcomes + " out · " + sw.elites + " elite");
+
+    log(`Engines: docker=${dc.up ? "up" : "down"} ollama=${ol.up ? "up" : "down"} janus=${jn.up ? "up" : "down"}(mem ${jn.memory}) smart-lib=${sl.up ? "up" : "down"} deep-research=v${dr.genome_version}(${dr.solutions} sol)`, "info");
+  } catch (e) {
+    log("engine probe failed: " + e.message, "err");
+  } finally {
+    if (btn) btn.classList.remove("spin");
+  }
+}
+
 async function refreshElites() {
   const r = await api.elites();
   if (!r.ok) { log("elites: " + r.error, "err"); return; }
@@ -137,6 +183,7 @@ async function ignite() {
   setMetrics({ ok: true, outcomes: r.outcomes, bans: r.bans, generation_max: r.generation });
   await refreshStatus();
   await refreshElites();
+  await refreshSystem();
   setBusy(false);
 }
 
@@ -196,10 +243,12 @@ function init() {
   $("opt-selfonly").addEventListener("change", (e) => (opt.selfOnly = e.target.checked));
   $("lim-up").addEventListener("click", () => { opt.limit = Math.min(24, opt.limit + 2); $("opt-limit").textContent = opt.limit; });
   $("lim-dn").addEventListener("click", () => { opt.limit = Math.max(2, opt.limit - 2); $("opt-limit").textContent = opt.limit; });
+  $("eng-refresh").addEventListener("click", refreshSystem);
 
   log("Hell Forge Swarm online. Local engine, no API. Ignite to run a real falsification wave.", "ok");
   refreshStatus();
   refreshElites();
+  refreshSystem();
 }
 
 window.addEventListener("DOMContentLoaded", init);
