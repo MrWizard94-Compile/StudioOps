@@ -14,6 +14,7 @@ const state = {
   viewMode: "code",
   busy: false,
   forgedLoaded: false,
+  researchRunning: false,
 };
 
 /* ---------- console ---------- */
@@ -286,8 +287,11 @@ async function applyCandidate() {
   setBusy(true);
   const msg = $("apply-msg");
   msg.textContent = "applying…"; msg.className = "apply-msg";
-  const r = await api.apply({ path: state.forge.path, code: state.forge.code });
-  if (r && r.ok) {
+  const r = await api.apply({ path: state.forge.path, code: state.forge.code, instruction: $("instruction").value.trim() || undefined });
+  if (r && r.staged) {
+    msg.textContent = r.note; msg.className = "apply-msg warn";
+    log(`Staged Janus job for ${r.workload} (${r.profile}) → ${r.jobDir}`, "warn");
+  } else if (r && r.ok) {
     msg.textContent = `Applied — backup saved as ${r.backup}.`; msg.className = "apply-msg ok";
     log(`Applied ${state.forge.path} (method ${r.method}, backup ${r.backup})`, "ok");
     state.originalContent = state.forge.code;
@@ -355,6 +359,21 @@ async function runProps() {
   setBusy(false);
 }
 
+/* ---------- deep_research generation (bounded, streamed) ---------- */
+async function launchResearch() {
+  if (state.researchRunning) {
+    await api.researchStop();
+    log("Stopping deep_research generation…", "warn");
+    return;
+  }
+  const r = await api.research();
+  if (!r || !r.ok) { log("deep_research: " + ((r && r.error) || "unknown"), "err"); return; }
+  state.researchRunning = true;
+  $("btn-research").textContent = "■ Stop deep_research Generation";
+  resetPipeline(); advanceTo("swarm"); pipelineActive(true);
+  log(`deep_research generation launched (pid ${r.pid}) — 1 bounded generation, genome evolves. Streaming…`, "ok");
+}
+
 /* ---------- forged artifacts ---------- */
 async function loadForged() {
   const el = await api.elites();
@@ -419,6 +438,7 @@ function init() {
   $("btn-ignite").addEventListener("click", igniteSwarm);
   $("btn-doctor").addEventListener("click", runDoctor);
   $("btn-props").addEventListener("click", runProps);
+  $("btn-research").addEventListener("click", launchResearch);
   $("eng-refresh").addEventListener("click", refreshSystem);
   $("tab-crucible").addEventListener("click", () => switchTab("crucible"));
   $("tab-forged").addEventListener("click", () => switchTab("forged"));
@@ -427,6 +447,17 @@ function init() {
   $("v-tests").addEventListener("click", () => setViewTab("tests"));
 
   api.onStage(handleStage); // real forge/crawl milestone events drive the pipeline
+
+  // deep_research generation streams its real stdout here; refresh artifacts when it ends.
+  api.onResearchLog((line) => log("[dre] " + line));
+  api.onResearchDone((d) => {
+    state.researchRunning = false;
+    $("btn-research").textContent = "🧬 Run deep_research Generation";
+    advanceTo("forged", true); pipelineDone();
+    log(`deep_research generation finished (exit ${d.code}).`, d.code === 0 ? "ok" : "warn");
+    refreshSystem();
+    if (!$("view-forged").classList.contains("hidden")) loadForged();
+  });
 
   log("Hell Forge online. Unified local engine — crawler · swarm · code-forge. No API.", "ok");
   loadFiles();

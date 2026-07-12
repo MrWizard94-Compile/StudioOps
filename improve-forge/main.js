@@ -7,11 +7,12 @@ const path = require('path');
 const fs = require('fs');
 const { spawn } = require('child_process');
 const codeforge = require('./forge/codeforge.cjs');
+const { janusWorkloadFor, stageJanusJob } = require('./forge/janusjob.cjs');
 
 const APP_DIR = __dirname;
 const BRIDGE = path.join(APP_DIR, 'bridge.ps1');
-const JANUS_ROOT = 'C:\\WPAI\\AI-Research\\Janus';
-const JANUS_REGISTRY = path.join(JANUS_ROOT, 'workloads', 'registry.json');
+const DRE_ROOT = 'C:\\WPAI\\AI-Research\\deep_research_engine';
+let researchProc = null; // the single in-flight deep_research generation, if any
 
 // Resolve a renderer-supplied relative path strictly inside a root (no traversal).
 function resolveInRoot(root, rel) {
@@ -19,24 +20,6 @@ function resolveInRoot(root, rel) {
   const target = path.resolve(rootFull, rel || '');
   if (target !== rootFull && !target.startsWith(rootFull + path.sep)) return null;
   return target;
-}
-
-// If an absolute file path lives under a registered Janus workload, return that workload
-// (so applying goes through the Janus validation gate + receipt — never a direct write).
-function janusWorkloadFor(absPath) {
-  let reg;
-  try { reg = JSON.parse(fs.readFileSync(JANUS_REGISTRY, 'utf8')); }
-  catch (e) { return null; }
-  const target = path.resolve(absPath).toLowerCase();
-  for (const w of reg.workloads || []) {
-    if (!w.local_root) continue; // skip repo-only / archived entries
-    const wroot = path.resolve(JANUS_ROOT, w.local_root);
-    const wl = wroot.toLowerCase();
-    if (target === wl || target.startsWith(wl + path.sep)) {
-      return { id: w.id, profile: w.validation_profile, root: wroot, status: w.status };
-    }
-  }
-  return null;
 }
 
 // Resolve a PowerShell 7 executable (pwsh); fall back to Windows PowerShell.
@@ -140,17 +123,9 @@ ipcMain.handle('forge:apply', async (_e, opts) => {
     if (typeof opts.code !== 'string' || !opts.code.length) return { ok: false, error: 'no code to apply' };
     const wl = janusWorkloadFor(abs);
     if (wl) {
-      // Invariant: registered workloads may only be mutated by Janus (validation receipt).
-      return {
-        ok: false,
-        blocked: true,
-        registered: true,
-        workload: wl.id,
-        profile: wl.profile,
-        error: `"${opts.path}" is registered Janus workload "${wl.id}" (profile ${wl.profile}). ` +
-          `Applying must go through the Janus validation gate (janus patch submit --apply), which produces a receipt. ` +
-          `Hell Forge will not write into a registered workload directly.`,
-      };
+      // Invariant + HITL doctrine: registered workloads are never direct-written. Stage a
+      // ready Janus job (plan + candidate + commands) for the human to run through the gate.
+      return stageJanusJob(wl, abs, opts.code, opts.instruction, APP_DIR);
     }
     const res = codeforge.applyWithBackup(abs, opts.code);
     return { ok: true, method: 'backup-write', registered: false, backup: res.backup };
@@ -171,6 +146,54 @@ ipcMain.handle('forge:restore', async (_e, opts) => {
   } catch (e) {
     return { ok: false, error: e.message };
   }
+});
+
+// --- deep_research self-improvement: launch ONE bounded generation, stream logs, stop ---
+// Non-blocking: resolves as soon as the process starts; output streams via 'research:log'
+// events and 'research:done' on exit. deep_research's own single-instance guard prevents
+// concurrent runs corrupting its workspace.
+ipcMain.handle('forge:research', (e) => {
+  if (researchProc) return { ok: false, error: 'a deep_research generation is already running' };
+  const send = (ch, d) => { try { e.sender.send(ch, d); } catch (err) {} };
+  let proc;
+  try {
+    // -u / PYTHONUNBUFFERED so stdout streams line-by-line (piped stdout is block-buffered).
+    proc = spawn('python', ['-u', 'main.py'], {
+      cwd: DRE_ROOT,
+      windowsHide: true,
+      env: { ...process.env, META_GENERATIONS: '1', OLLAMA_CODE_MODEL: 'qwen2.5-coder:14b', PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
+    });
+  } catch (err) {
+    return { ok: false, error: 'failed to launch python: ' + err.message };
+  }
+  researchProc = proc;
+  let buf = '';
+  const onData = (d) => {
+    buf += d.toString('utf8');
+    let i;
+    while ((i = buf.indexOf('\n')) >= 0) {
+      const line = buf.slice(0, i).replace(/\r$/, '');
+      buf = buf.slice(i + 1);
+      if (line.trim()) send('research:log', line);
+    }
+  };
+  proc.stdout.on('data', onData);
+  proc.stderr.on('data', onData);
+  proc.on('error', (err) => send('research:log', 'ERROR: ' + err.message));
+  proc.on('close', (code) => {
+    if (buf.trim()) send('research:log', buf.trim());
+    researchProc = null;
+    send('research:done', { code });
+  });
+  return { ok: true, started: true, pid: proc.pid };
+});
+
+ipcMain.handle('forge:researchStop', () => {
+  if (!researchProc) return { ok: true, stopped: false };
+  const p = researchProc;
+  try { p.kill('SIGTERM'); } catch (e) {}
+  setTimeout(() => { try { if (p && !p.killed) p.kill('SIGKILL'); } catch (e) {} }, 3000);
+  return { ok: true, stopped: true };
 });
 
 function createWindow() {
@@ -211,4 +234,9 @@ app.on('window-all-closed', () => {
 
 app.on('activate', () => {
   if (BrowserWindow.getAllWindows().length === 0) createWindow();
+});
+
+// Don't orphan a running deep_research generation when the app exits.
+app.on('before-quit', () => {
+  if (researchProc) { try { researchProc.kill('SIGKILL'); } catch (e) {} }
 });

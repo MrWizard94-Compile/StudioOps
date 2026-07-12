@@ -23,4 +23,17 @@ contextBridge.exposeInMainWorld('forge', {
     ipcRenderer.on('forge:stage', h);
     return () => ipcRenderer.removeListener('forge:stage', h);
   },
+  // deep_research bounded generation control + streamed logs.
+  research: () => ipcRenderer.invoke('forge:research'),
+  researchStop: () => ipcRenderer.invoke('forge:researchStop'),
+  onResearchLog: (cb) => {
+    const h = (_e, line) => cb(line);
+    ipcRenderer.on('research:log', h);
+    return () => ipcRenderer.removeListener('research:log', h);
+  },
+  onResearchDone: (cb) => {
+    const h = (_e, d) => cb(d);
+    ipcRenderer.on('research:done', h);
+    return () => ipcRenderer.removeListener('research:done', h);
+  },
 });
