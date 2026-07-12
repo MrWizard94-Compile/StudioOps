@@ -161,7 +161,7 @@ ipcMain.handle('forge:research', (e) => {
     proc = spawn('python', ['-u', 'main.py'], {
       cwd: DRE_ROOT,
       windowsHide: true,
-      env: { ...process.env, META_GENERATIONS: '1', OLLAMA_CODE_MODEL: 'qwen2.5-coder:14b', PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
+      env: { ...process.env, META_GENERATIONS: '1', OLLAMA_CODE_MODEL: 'qwen2.5:7b', PYTHONIOENCODING: 'utf-8', PYTHONUNBUFFERED: '1' },
     });
   } catch (err) {
     return { ok: false, error: 'failed to launch python: ' + err.message };

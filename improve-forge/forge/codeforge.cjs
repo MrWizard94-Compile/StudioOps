@@ -14,13 +14,15 @@ const path = require("path");
 const OLLAMA = {
   host: process.env.HFS_OLLAMA_HOST || "127.0.0.1",
   port: Number(process.env.HFS_OLLAMA_PORT || 11434),
-  model: process.env.HFS_MODEL || "qwen2.5-coder:14b",
+  // qwen2.5:7b is ~2x faster than the 14b coder on modest hardware and still writes solid
+  // code; override with HFS_MODEL (e.g. qwen2.5-coder:7b) for the best code quality.
+  model: process.env.HFS_MODEL || "qwen2.5:7b",
 };
 const SANDBOX_IMAGE = process.env.HFS_SANDBOX_IMAGE || "node:20-alpine";
 const NPM_CACHE_VOL = "hfs-npm-cache"; // persistent volume so tsc isn't re-downloaded every run
 
 // ---- Ollama generation (local, no key) ----
-function ollamaGenerate(prompt, { num_predict = 2048, temperature = 0.2, timeoutMs = 180000 } = {}) {
+function ollamaGenerate(prompt, { num_predict = 2048, temperature = 0.2, timeoutMs = 300000 } = {}) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({
       model: OLLAMA.model, prompt, stream: false, think: false,
