@@ -81,11 +81,17 @@
             </div>
           </div>
 
-          <!-- Crawled open-source bits -->
+          <!-- Crawled library: harvest + search -->
           <div class="card">
-            <div class="card-h">⑂ Crawled Open-Source Bits <button id="btn-crawl" class="mini">⟳ Crawl</button></div>
+            <div class="card-h">⑂ Crawled Library <button id="btn-crawl" class="mini">⟳ Crawl</button></div>
             <div class="card-b">
-              <div id="crawled" class="crawled"><div class="empty">No crawl yet. Run a crawl to harvest license-clean code into Smart-Library.</div></div>
+              <input id="crawl-q" class="minput" type="text" placeholder="crawl a topic (blank = rotate specs)…" />
+              <div id="crawled" class="crawled"><div class="empty">No crawl yet. Crawl a topic, or leave blank to rotate mission specs. License-clean only; new finds are seeded into memory.</div></div>
+              <div class="libsearch">
+                <input id="lib-q" class="minput" type="text" placeholder="search the harvested library…" />
+                <button id="btn-libsearch" class="mini">⌕ Search</button>
+              </div>
+              <div id="libresults" class="crawled"></div>
             </div>
           </div>
         </div>

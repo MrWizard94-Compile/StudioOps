@@ -14,6 +14,7 @@ contextBridge.exposeInMainWorld('forge', {
   files: (opts) => ipcRenderer.invoke('forge:files', opts),
   fileContent: (opts) => ipcRenderer.invoke('forge:filecontent', opts),
   crawl: (opts) => ipcRenderer.invoke('forge:crawl', opts),
+  librarySearch: (opts) => ipcRenderer.invoke('forge:librarysearch', opts),
   forge: (opts) => ipcRenderer.invoke('forge:forge', opts),
   apply: (opts) => ipcRenderer.invoke('forge:apply', opts),
   restore: (opts) => ipcRenderer.invoke('forge:restore', opts),

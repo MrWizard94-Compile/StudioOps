@@ -8,6 +8,7 @@ const fs = require('fs');
 const { spawn } = require('child_process');
 const codeforge = require('./forge/codeforge.cjs');
 const { janusWorkloadFor, stageJanusJob } = require('./forge/janusjob.cjs');
+const memory = require('./forge/memory.cjs');
 
 const APP_DIR = __dirname;
 const BRIDGE = path.join(APP_DIR, 'bridge.ps1');
@@ -39,6 +40,7 @@ function runBridge(verb, opts = {}) {
     if (opts.path) args.push('-Path', String(opts.path));
     if (opts.crawlProfile) args.push('-CrawlProfile', String(opts.crawlProfile));
     if (opts.only) args.push('-Only', String(opts.only));
+    if (opts.query) args.push('-Query', String(opts.query));
 
     let ps;
     try {
@@ -79,6 +81,19 @@ ipcMain.handle('forge:ignite', (_e, opts) => runBridge('ignite', opts || {}));
 ipcMain.handle('forge:system', () => runBridge('system'));
 ipcMain.handle('forge:files', (_e, opts) => runBridge('files', opts || {}));
 ipcMain.handle('forge:filecontent', (_e, opts) => runBridge('filecontent', opts || {}));
+// Search the crawled Smart-Library corpus (the read path the crawler was missing).
+ipcMain.handle('forge:librarysearch', async (_e, opts) => {
+  opts = opts || {};
+  try {
+    if (!opts.query || !String(opts.query).trim()) return { ok: false, error: 'enter a search query' };
+    const { slices, total_chars } = await memory.queryContext(String(opts.query), { limit: opts.limit || 6, maxChars: 6000 });
+    const results = slices.map((s) => ({ ...memory.previewOf(s), text: String(s).slice(0, 600) }));
+    return { ok: true, count: results.length, total_chars, results };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
+});
+
 ipcMain.handle('forge:crawl', async (_e, opts) => {
   const emit = (s) => { try { _e.sender.send('forge:stage', { op: 'crawl', ...s }); } catch (err) {} };
   emit({ stage: 'crawling', detail: 'GitHub REST API — license allow-list + secret filter' });

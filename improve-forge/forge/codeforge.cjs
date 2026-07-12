@@ -10,6 +10,7 @@ const { spawn } = require("child_process");
 const fs = require("fs");
 const os = require("os");
 const path = require("path");
+const memory = require("./memory.cjs"); // read path into the crawled Smart-Library corpus
 
 const OLLAMA = {
   host: process.env.HFS_OLLAMA_HOST || "127.0.0.1",
@@ -56,15 +57,27 @@ function extractCode(text) {
   return text.trim();
 }
 
-async function generateCandidate(fileContent, instruction, ext = "ts") {
+async function generateCandidate(fileContent, instruction, ext = "ts", contextBlock = "") {
   const lang = ext === "tsx" || ext === "jsx" ? "tsx" : ext;
   const prompt =
+    contextBlock +
     `You are a senior engineer. Rewrite the file below to: ${instruction}.\n` +
     `Preserve behavior and public exports. Return ONLY the complete corrected file inside a single ` +
     "```" + lang + " code block, with no commentary before or after.\n\n" +
     "```" + lang + "\n" + fileContent + "\n```";
   const { text, ms } = await ollamaGenerate(prompt);
   return { code: extractCode(text), model: OLLAMA.model, gen_ms: ms };
+}
+
+// Pull the most relevant snippets from the crawled Smart-Library corpus. Fail-open: context is
+// an enhancement, so a down/empty library never blocks a forge.
+async function getMemoryRefs(instruction, ext, max = 3) {
+  try {
+    const { slices } = await memory.queryContext(`${instruction} (${ext})`, { limit: max, maxChars: 2600 });
+    return slices.slice(0, max);
+  } catch (e) {
+    return [];
+  }
 }
 
 // ---- Real, language-aware falsification in a throwaway Docker sandbox ----
@@ -137,9 +150,27 @@ function restoreBackup(filePath) {
 // Orchestrate one candidate: generate -> falsify. `onProgress(stage)` is called with the
 // real milestones (generating / generated / falsifying / verdict) so a UI pipeline can
 // reflect actual phases instead of a timed animation.
-async function forgeOne(fileContent, instruction, ext = "ts", onProgress = () => {}) {
-  onProgress({ stage: "generating", detail: `local Ollama (${OLLAMA.model})` });
-  const gen = await generateCandidate(fileContent, instruction, ext);
+async function forgeOne(fileContent, instruction, ext = "ts", onProgress = () => {}, { useMemory = true } = {}) {
+  // Close the crawler loop: consult the harvested corpus for relevant patterns and feed them
+  // to the model as reference context, so crawled "game-changing code" measurably shapes output.
+  let refs = [];
+  let contextBlock = "";
+  if (useMemory) {
+    onProgress({ stage: "memory", detail: "querying the crawled library" });
+    refs = await getMemoryRefs(instruction, ext);
+    if (refs.length) {
+      contextBlock =
+        "Reference patterns from our crawled open-source library (adapt what's useful, don't copy blindly):\n" +
+        refs.map((s, i) => "--- ref " + (i + 1) + " ---\n" + s).join("\n") +
+        "\n\n";
+      onProgress({ stage: "memory", detail: refs.length + " ref(s) pulled from the library" });
+    } else {
+      onProgress({ stage: "memory", detail: "no relevant library refs" });
+    }
+  }
+
+  onProgress({ stage: "generating", detail: `local Ollama (${OLLAMA.model})` + (refs.length ? ` + ${refs.length} ref(s)` : "") });
+  const gen = await generateCandidate(fileContent, instruction, ext, contextBlock);
   onProgress({ stage: "generated", detail: `${gen.code.length} chars in ${gen.gen_ms}ms`, gen_ms: gen.gen_ms });
   onProgress({ stage: "falsifying", detail: `Docker sandbox (.${ext})` });
   const verdict = await falsifyInSandbox(gen.code, ext);
@@ -151,10 +182,12 @@ async function forgeOne(fileContent, instruction, ext = "ts", onProgress = () =>
     verdict: v,
     compile_ok: verdict.ok,
     compile_log: verdict.log, compile_exit: verdict.exit, sandbox_stage: verdict.stage,
+    memory_ref_count: refs.length,
+    memory_refs: refs.map((s) => memory.previewOf(s)),
   };
 }
 
-module.exports = { ollamaGenerate, generateCandidate, falsifyInSandbox, sandboxProfile, applyWithBackup, restoreBackup, forgeOne, OLLAMA, SANDBOX_IMAGE };
+module.exports = { ollamaGenerate, generateCandidate, falsifyInSandbox, sandboxProfile, getMemoryRefs, applyWithBackup, restoreBackup, forgeOne, OLLAMA, SANDBOX_IMAGE };
 
 // ---- CLI self-test ----
 if (require.main === module) {

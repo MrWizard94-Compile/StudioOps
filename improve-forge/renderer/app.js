@@ -108,7 +108,8 @@ function pipelineDone() {
 function handleStage(d) {
   if (!d || !d.stage) return;
   if (d.op === "forge") {
-    if (d.stage === "generating") { advanceTo("swarm"); log("Generating candidate — " + d.detail); }
+    if (d.stage === "memory") { log("Crawled library — " + d.detail); }
+    else if (d.stage === "generating") { advanceTo("swarm"); log("Generating candidate — " + d.detail); }
     else if (d.stage === "generated") { log("Candidate generated — " + d.detail, "ok"); }
     else if (d.stage === "falsifying") { advanceTo("falsify"); log("Falsifying in Docker sandbox — " + d.detail); }
     else if (d.stage === "verdict") {
@@ -187,9 +188,12 @@ function renderCandidate(r) {
     ? `<span class="red">registered workload "${escapeHtml(r.workload)}" — apply routes to Janus receipt gate</span>`
     : `unregistered target — apply writes with a .bak backup`;
   $("insp-meta").classList.remove("hidden");
+  const refs = r.memory_refs || [];
+  const memNote = r.memory_ref_count > 0 ? ` · <span class="ember">used ${r.memory_ref_count} crawled ref${r.memory_ref_count > 1 ? "s" : ""}</span>` : "";
   $("insp-meta").innerHTML =
     `<span class="vb ${r.verdict}">${r.verdict}</span> · model ${escapeHtml(r.model || "")} · ` +
-    `generated ${r.gen_ms}ms · sandbox ${escapeHtml(r.sandbox_stage || "")} (exit ${r.compile_exit}) · ${wlNote}`;
+    `generated ${r.gen_ms}ms · sandbox ${escapeHtml(r.sandbox_stage || "")} (exit ${r.compile_exit})${memNote} · ${wlNote}` +
+    (refs.length ? `<div class="refs">${refs.map((x) => `<span class="ref" title="${escapeHtml(x.source || "")}">⑂ ${escapeHtml(x.preview || x.source || "ref")}</span>`).join("")}</div>` : "");
   renderInspectorBody();
   $("apply-row").classList.remove("hidden");
   const applyBtn = $("btn-apply");
@@ -257,29 +261,50 @@ async function runCrawl() {
   advanceTo("scan", true);
   pipelineActive(true);
   $("btn-crawl").disabled = true;
-  log("Crawling open-source code (license/secret filtered) → Smart-Library…");
-  const r = await api.crawl({ limit: 6 });
+  const q = $("crawl-q").value.trim();
+  log(q ? `Crawling GitHub for "${q}" (license/secret filtered) → Smart-Library…` : "Crawling (rotating mission specs) → Smart-Library…");
+  const r = await api.crawl({ limit: 6, query: q || undefined });
   pipelineActive(false);
   if (!r || !r.ok) { log("crawl: " + ((r && r.error) || "unknown"), "err"); pipelineDone(); setBusy(false); return; }
   pipelineDone();
   renderCrawled(r);
-  log(`Crawl: ${r.harvested} harvested · ${r.kept} kept · ${r.seeded} seeded · memory ${r.memory_up ? "up" : "down"}`, r.seeded > 0 ? "ok" : "warn");
+  log(`Crawl [${r.mode}]: ${r.harvested} harvested · ${r.kept} kept · ${r.new_this_run} new · ${r.seeded} seeded · memory ${r.memory_up ? "up" : "down"}`, r.new_this_run > 0 ? "ok" : "warn");
   await refreshSystem();
   setBusy(false);
 }
 function renderCrawled(r) {
   const box = $("crawled");
   const bits = r.bits || [];
-  if (!bits.length) { box.innerHTML = `<div class="empty">No kept snippets this run.</div>`; return; }
-  box.innerHTML = "";
+  const head = `<div class="lbl2">${escapeHtml(r.mode || "")} · ${r.new_this_run || 0} new this run</div>`;
+  if (!bits.length) { box.innerHTML = head + `<div class="empty">No bits this run.</div>`; return; }
+  box.innerHTML = head;
   for (const b of bits) {
     const el = document.createElement("div");
-    el.className = "bit";
+    el.className = "bit" + (b.is_new ? " isnew" : "");
     el.innerHTML =
-      `<div class="bit-h"><span class="bit-t">${escapeHtml(b.title)}</span><span class="bit-lic">${escapeHtml(b.license || "?")}</span></div>` +
+      `<div class="bit-h"><span class="bit-t">${b.is_new ? '<span class="newpill">NEW</span> ' : ""}${escapeHtml(b.title)}</span><span class="bit-lic">${escapeHtml(b.license || "?")}</span></div>` +
       `<div class="bit-s">${escapeHtml(b.snippet || "")}</div>`;
     box.appendChild(el);
   }
+}
+async function librarySearch() {
+  const q = $("lib-q").value.trim();
+  if (!q) { log("enter a library search query", "warn"); return; }
+  const box = $("libresults");
+  box.innerHTML = `<div class="empty">searching the library…</div>`;
+  const r = await api.librarySearch({ query: q, limit: 6 });
+  if (!r || !r.ok) { box.innerHTML = `<div class="empty">search: ${escapeHtml((r && r.error) || "unknown")}</div>`; return; }
+  if (!r.results.length) { box.innerHTML = `<div class="empty">no matches in the harvested library</div>`; return; }
+  box.innerHTML = `<div class="lbl2">${r.count} matches for “${escapeHtml(q)}”</div>`;
+  for (const m of r.results) {
+    const el = document.createElement("div");
+    el.className = "bit";
+    el.innerHTML =
+      `<div class="bit-h"><span class="bit-t">${escapeHtml(m.preview || "(match)")}</span>${m.source ? `<span class="bit-lic">src</span>` : ""}</div>` +
+      `<div class="bit-s">${escapeHtml(m.text || "")}</div>`;
+    box.appendChild(el);
+  }
+  log(`Library search “${q}”: ${r.count} matches`, "ok");
 }
 
 async function applyCandidate() {
@@ -433,6 +458,9 @@ function init() {
   }
   $("btn-forge").addEventListener("click", igniteFile);
   $("btn-crawl").addEventListener("click", runCrawl);
+  $("btn-libsearch").addEventListener("click", librarySearch);
+  $("lib-q").addEventListener("keydown", (e) => { if (e.key === "Enter") librarySearch(); });
+  $("crawl-q").addEventListener("keydown", (e) => { if (e.key === "Enter" && !state.busy) runCrawl(); });
   $("btn-apply").addEventListener("click", applyCandidate);
   $("btn-restore").addEventListener("click", restoreFile);
   $("btn-ignite").addEventListener("click", igniteSwarm);

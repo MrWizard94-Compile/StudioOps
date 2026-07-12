@@ -18,7 +18,8 @@ param(
     [string]$Root = '',
     [string]$Path = '',
     [string]$CrawlProfile = '',
-    [string]$Only = ''
+    [string]$Only = '',
+    [string]$Query = ''
 )
 $ErrorActionPreference = 'Stop'
 
@@ -195,7 +196,6 @@ try {
             # reported honestly (seeded vs harvested, and whether memory was reachable).
             $crawlerDir = 'C:\WPAI\Software\GitHubCodeCrawler'
             $prof = if ($CrawlProfile) { $CrawlProfile } else { 'self-improvement' }
-            $only = if ($Only) { $Only } else { 'retry-backoff,property-test' }
             $perPage = [Math]::Max(3, [Math]::Min(12, $Limit))
             $safe = ($prof -replace '[^a-zA-Z0-9._-]', '_')
             $outFile = Join-Path $crawlerDir ("out\" + $safe + "\snippets.jsonl")
@@ -204,13 +204,35 @@ try {
             $tok = if ($env:GITHUB_TOKEN) { $env:GITHUB_TOKEN } elseif ($env:GH_TOKEN) { $env:GH_TOKEN } else { '' }
             if (-not $tok) { try { $tok = (& gh auth token 2>$null | Select-Object -First 1) } catch {} }
 
-            $ran = $false; $crawlErr = ''
+            # Snapshot existing content hashes BEFORE the crawl so we can report THIS run's genuinely
+            # new bits (append-only + dedup means a repeat of the same query adds nothing).
+            $beforeHashes = New-Object 'System.Collections.Generic.HashSet[string]'
+            if (Test-Path -LiteralPath $outFile) {
+                foreach ($ln in (Get-Content -LiteralPath $outFile -ErrorAction SilentlyContinue)) {
+                    if (-not "$ln".Trim()) { continue }
+                    try { $o = $ln | ConvertFrom-Json; if ($o.content_sha256_16) { [void]$beforeHashes.Add([string]$o.content_sha256_16) } } catch {}
+                }
+            }
+
+            $ran = $false; $crawlErr = ''; $mode = ''
             if (Test-Path -LiteralPath (Join-Path $crawlerDir 'github_code_crawler')) {
                 Push-Location -LiteralPath $crawlerDir
                 try {
                     if ($tok) { $env:GH_TOKEN = $tok }
-                    $pyArgs = @('-m', 'github_code_crawler', 'mission', '--profile', $prof,
-                        '--only', $only, '--max-pages', '1', '--per-page', "$perPage")
+                    if ($Query) {
+                        # Custom, user-driven search — real variety, into the same corpus store.
+                        $mode = "search: $Query"
+                        $pyArgs = @('-m', 'github_code_crawler', 'search', $Query, '--max-pages', '1', '--out', $outFile)
+                    }
+                    else {
+                        # Rotate specs so repeat crawls run DIFFERENT queries (the old code was stuck
+                        # on a fixed 2 -> same hits -> deduped -> nothing new). Pick 3 of the profile's specs.
+                        $allSpecs = @('tournament-selection', 'nsga-diversity', 'elitism-hall-of-fame', 'gene-mutation',
+                            'bandit-explore', 'experiment-tracking', 'self-play-loop', 'property-test', 'retry-backoff', 'fitness-landscape')
+                        $pick = if ($Only) { $Only } else { (($allSpecs | Get-Random -Count 3) -join ',') }
+                        $mode = "mission: $pick"
+                        $pyArgs = @('-m', 'github_code_crawler', 'mission', '--profile', $prof, '--only', $pick, '--max-pages', '1', '--per-page', "$perPage")
+                    }
                     & python @pyArgs 2>&1 | Out-Null
                     $ran = $true
                 }
@@ -219,8 +241,8 @@ try {
             }
             else { $crawlErr = 'crawler package not found' }
 
-            # Parse kept snippets from the append-only JSONL store (take the most recent).
-            $bits = @(); $kept = 0; $harvested = 0
+            # Parse the store; split into this-run's NEW kept rows vs. the rest.
+            $harvested = 0; $kept = 0; $newKept = @(); $keptAll = @()
             if (Test-Path -LiteralPath $outFile) {
                 $rows = @()
                 foreach ($ln in (Get-Content -LiteralPath $outFile -ErrorAction SilentlyContinue)) {
@@ -230,34 +252,40 @@ try {
                 $harvested = $rows.Count
                 $keptAll = @($rows | Where-Object { $_.kept })
                 $kept = $keptAll.Count
-                foreach ($r in @($keptAll | Select-Object -Last $perPage)) {
-                    $snip = [string]$r.content
-                    if ($snip.Length -gt 600) { $snip = $snip.Substring(0, 600) }
-                    $bits += [ordered]@{
-                        title   = ([string]$r.repo_full_name + ' / ' + [string]$r.path)
-                        repo    = [string]$r.repo_full_name
-                        path    = [string]$r.path
-                        license = [string]$r.license_spdx
-                        lang    = [string]$r.language
-                        url     = [string]$r.html_url
-                        snippet = $snip
-                    }
+                $newKept = @($keptAll | Where-Object { $_.content_sha256_16 -and -not $beforeHashes.Contains([string]$_.content_sha256_16) })
+            }
+            $newCount = $newKept.Count
+
+            # Show THIS run's new finds; if the query only returned dups, show a fresh random sample
+            # so the panel isn't stale — each bit flags whether it's new this run.
+            $show = if ($newKept.Count -gt 0) { $newKept } else { @($keptAll | Get-Random -Count ([Math]::Min($perPage, [Math]::Max(1, $keptAll.Count)))) }
+            $bits = @()
+            foreach ($r in @($show | Select-Object -First $perPage)) {
+                $snip = [string]$r.content
+                if ($snip.Length -gt 600) { $snip = $snip.Substring(0, 600) }
+                $isNew = [bool]($r.content_sha256_16 -and -not $beforeHashes.Contains([string]$r.content_sha256_16))
+                $bits += [ordered]@{
+                    title   = ([string]$r.repo_full_name + ' / ' + [string]$r.path)
+                    repo    = [string]$r.repo_full_name
+                    path    = [string]$r.path
+                    license = [string]$r.license_spdx
+                    lang    = [string]$r.language
+                    url     = [string]$r.html_url
+                    snippet = $snip
+                    is_new  = $isNew
                 }
             }
 
-            # Seed kept bits into Smart-Library — best-effort, bounded, honest.
+            # Seed only the NEW kept rows into Smart-Library (no point re-seeding dups).
             $memUp = $false; $seeded = 0
-            try {
-                $h = Invoke-RestMethod -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 5
-                $memUp = ($h.status -eq 'ok')
-            }
-            catch {}
+            try { $memUp = ((Invoke-RestMethod -Uri 'http://127.0.0.1:8000/health' -TimeoutSec 5).status -eq 'ok') } catch {}
             if ($memUp) {
-                foreach ($b in $bits) {
+                foreach ($r in @($newKept | Select-Object -First 10)) {
                     try {
-                        $lang = if ($b.lang) { $b.lang } else { 'All' }
+                        $snip = [string]$r.content; if ($snip.Length -gt 2000) { $snip = $snip.Substring(0, 2000) }
+                        $lang = if ($r.language) { [string]$r.language } else { 'All' }
                         $body = @{
-                            content  = ($b.snippet + "`n`n-- source: " + $b.url + " (SPDX " + $b.license + ")")
+                            content  = ($snip + "`n`n-- source: " + [string]$r.html_url + " (SPDX " + [string]$r.license_spdx + ")")
                             category = 'Crawled Open-Source'
                             language = $lang
                         } | ConvertTo-Json -Compress
@@ -269,16 +297,17 @@ try {
             }
 
             Out-Json ([ordered]@{
-                    ok        = $true
-                    profile   = $prof
-                    only      = $only
-                    ran       = $ran
-                    harvested = $harvested
-                    kept      = $kept
-                    seeded    = $seeded
-                    memory_up = $memUp
-                    error     = $crawlErr
-                    bits      = @($bits)
+                    ok           = $true
+                    profile      = $prof
+                    mode         = $mode
+                    ran          = $ran
+                    harvested    = $harvested
+                    kept         = $kept
+                    new_this_run = $newCount
+                    seeded       = $seeded
+                    memory_up    = $memUp
+                    error        = $crawlErr
+                    bits         = @($bits)
                 })
         }
         'system' {
