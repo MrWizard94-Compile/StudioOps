@@ -1,0 +1,11 @@
+{
+  "path_id": "path-8e633381189e",
+  "generation": 3,
+  "hypothesis": "On studioops-blackboard, improve reliability by applying blackboard-not-chat via guess-then-falsify",
+  "verdict": "SUPPORTED",
+  "static_score": 1.0,
+  "artifact": "cli/lib/WpaiBlackboardVerify.ps1",
+  "commands": ["wpai board verify", "wpai board doctor"],
+  "metric": "kill_switch.research held under concurrent RMW; generation monotonic; schema complete",
+  "leverage": "foundation for overnight/agents — untrusted ledger = all automation is unsafe"
+}

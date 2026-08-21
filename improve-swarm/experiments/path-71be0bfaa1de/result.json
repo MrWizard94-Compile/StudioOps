@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-71be0bfaa1de",
+  "verdict": "SUPPORTED",
+  "note": "outcomes append + elite archive count=24",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:53.7036268Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "double-entry",
+  "auto": true,
+  "lever": "throughput",
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via human-before-auto; validate with docs-delta.",
+  "invert": "human-before-auto",
+  "probe": "docs-delta",
+  "metrics": {
+    "elite_count": 24,
+    "outcomes_grew": true,
+    "files_ok": true,
+    "elapsed_ms": 72
+  }
+}

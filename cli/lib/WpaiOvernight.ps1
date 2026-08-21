@@ -156,20 +156,12 @@ function Start-WpaiOvernight {
                     continue
                 }
 
-                # pre-charge conservative estimate
-                Invoke-WpaiBlackboardRmw -Mutator {
-                    param($b)
-                    $b['budgets']['api_usd_spent_est_day'] = [double]$b['budgets']['api_usd_spent_est_day'] + $cost
-                    $b['budgets']['api_usd_spent_est_month'] = [double]$b['budgets']['api_usd_spent_est_month'] + $cost
-                    $b['budgets']['executor_invocations_day'] = [int]$b['budgets']['executor_invocations_day'] + 1
-                } | Out-Null
-
+                # Preflight only — charge is done inside Janus --wpai-budget-gate (avoids double-count)
                 $parts = $cli -split '\s+', 2
                 $exe = $parts[0]
                 $bin = if ($parts.Count -gt 1) { $parts[1] } else { '' }
                 $args = @()
                 if ($bin) { $args += $bin }
-                # Prefer in-process Janus budget gate (PR-09); still charge + re-check each external invocation
                 $args += @('loop', 'run', '-t', $parentId, '--max-rounds', '1', '--wpai-budget-gate')
                 $argStr = ($args | ForEach-Object { if ($_ -match '\s') { '"{0}"' -f $_ } else { $_ } }) -join ' '
 

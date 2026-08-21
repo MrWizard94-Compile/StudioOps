@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3961841d954f",
+  "verdict": "SUPPORTED",
+  "note": "status survives chaos check catalog=212",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:53.9798532Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "fuzz",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying fuzz via auto-before-human-for-drafts; validate with docs-delta.",
+  "invert": "auto-before-human-for-drafts",
+  "probe": "docs-delta",
+  "metrics": {
+    "status_ok": true,
+    "elapsed_ms": 96,
+    "files_ok": true
+  }
+}

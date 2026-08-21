@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-77f8c9e52df3",
+  "verdict": "SUPPORTED",
+  "note": "status survives chaos check catalog=382",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:49.3796768Z",
+  "money": false,
+  "target": "studioops-cli",
+  "tactic": "chaos-inject",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On studioops-cli, improve latency by applying chaos-inject via less-script-more-agent; validate with schema-validate.",
+  "invert": "less-script-more-agent",
+  "probe": "schema-validate",
+  "metrics": {
+    "status_ok": true,
+    "elapsed_ms": 108,
+    "files_ok": true
+  }
+}

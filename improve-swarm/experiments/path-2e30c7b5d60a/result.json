@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2e30c7b5d60a",
+  "verdict": "SUPPORTED",
+  "note": "static self-fit score=0.68",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:54.1630632Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "local-ollama",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying local-ollama via guess-then-falsify; validate with dry-run-script.",
+  "invert": "guess-then-falsify",
+  "probe": "dry-run-script",
+  "metrics": {
+    "score": 0.68,
+    "elapsed_ms": 30,
+    "files_ok": true,
+    "banned": false
+  }
+}

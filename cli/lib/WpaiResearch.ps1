@@ -80,7 +80,7 @@ function Start-WpaiResearchRun {
             dry_run          = $true
             meta_generations = $MetaGenerations
             root             = $root
-            message          = 'Would launch research engine (no money/API beyond local Ollama)'
+            message          = 'Would launch research engine (no money/API beyond local Ollama). Prestige: archive stuck genome before reset; META_GENERATIONS=0 blocked unless allow_forever ticket. HITL: approve research_enable ticket before real run.'
         }
     }
     $env:META_GENERATIONS = [string]$MetaGenerations

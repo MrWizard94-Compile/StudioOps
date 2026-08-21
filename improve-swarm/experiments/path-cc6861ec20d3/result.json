@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-cc6861ec20d3",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:54.5095546Z",
+  "money": false,
+  "target": "token-budget",
+  "tactic": "double-entry",
+  "auto": true,
+  "lever": "throughput",
+  "hypothesis": "On token-budget, improve throughput by applying double-entry via borrow-from-accounting; validate with static-score.",
+  "invert": "borrow-from-accounting",
+  "probe": "static-score",
+  "metrics": {
+    "balanced": true,
+    "elapsed_ms": 10
+  }
+}

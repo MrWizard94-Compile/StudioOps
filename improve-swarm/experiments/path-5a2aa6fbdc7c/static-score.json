@@ -1,0 +1,17 @@
+{
+  "path_id": "path-5a2aa6fbdc7c",
+  "probe": "static-score",
+  "tests_green": true,
+  "measurable_hook": true,
+  "codebase_fit": true,
+  "no_dual_write": true,
+  "novelty": true,
+  "risk_penalty": 0.0,
+  "notes": [
+    "Reads BLACKBOARD + .aether; does not rewrite workload trees",
+    "High-frequency polling discouraged; min_interval_seconds=30",
+    "Event-driven bus preferred over tight observe loops"
+  ],
+  "fitness": 1.0,
+  "verdict": "survive"
+}
