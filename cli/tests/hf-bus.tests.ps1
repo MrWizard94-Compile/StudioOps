@@ -1,5 +1,8 @@
 # Pester-free tests for hf-bus.ps1 — isolated temp bus, no real Council pollution.
 # Run: pwsh -NoProfile -File C:\WPAI\Software\StudioOps\cli\tests\hf-bus.tests.ps1
+[CmdletBinding()]
+param([string]$CliPath = (Join-Path (Split-Path -Parent $PSScriptRoot) 'hf-bus.ps1'))
+
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
@@ -35,7 +38,7 @@ $env:HF_BUS = $bus
 Remove-Item Env:HF_ROLE -ErrorAction SilentlyContinue
 
 try {
-    . C:\WPAI\Software\StudioOps\cli\hf-bus.ps1
+    . $CliPath
 
     Write-Host "hf-bus isolated tests" -ForegroundColor DarkYellow
     Write-Host "bus: $bus"
@@ -110,7 +113,7 @@ try {
 
     # direct script invoke against temp bus
     $env:HF_BUS = $bus
-    $null = & pwsh -NoProfile -File C:\WPAI\Software\StudioOps\cli\hf-bus.ps1 say -Message 'direct-ok' -To all -From executor
+    $null = & pwsh -NoProfile -File $CliPath say -Message 'direct-ok' -To all -From executor
     $hit = @(Read-HfBus -Path $bus -Contains 'direct-ok')
     Assert-True ($hit.Count -ge 1) 'direct script invoke say'
 
@@ -122,6 +125,16 @@ finally {
     Remove-Item Env:HF_BUS -ErrorAction SilentlyContinue
     Remove-Item Env:HF_ROLE -ErrorAction SilentlyContinue
     if (Test-Path -LiteralPath $tmpRoot) {
-        Remove-Item -LiteralPath $tmpRoot -Recurse -Force -ErrorAction SilentlyContinue
+        $cleanupTarget = [IO.Path]::GetFullPath($tmpRoot)
+        $cleanupParent = [IO.Path]::GetFullPath([IO.Path]::GetTempPath()).TrimEnd([IO.Path]::DirectorySeparatorChar)
+        if ([IO.Path]::GetDirectoryName($cleanupTarget) -ne $cleanupParent -or
+            [IO.Path]::GetFileName($cleanupTarget) -notmatch '^hf-bus-tests-[a-f0-9]{32}$') {
+            throw 'Refusing cleanup outside the exact disposable bus-test directory.'
+        }
+        $cleanupEntries = @((Get-Item -LiteralPath $cleanupTarget -Force)) + @(Get-ChildItem -LiteralPath $cleanupTarget -Recurse -Force)
+        if (@($cleanupEntries | Where-Object { ($_.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0 }).Count) {
+            throw 'Refusing recursive cleanup through a linked fixture path.'
+        }
+        Remove-Item -LiteralPath $cleanupTarget -Recurse -Force
     }
 }

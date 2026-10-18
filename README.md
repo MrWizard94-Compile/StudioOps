@@ -93,8 +93,21 @@ hf-bus export
 
 Install into profile: `pwsh -File cli\Install-HfBus.ps1`
 
-Tests: `pwsh -File cli\tests\hf-bus.tests.ps1`  
-Self-check: `pwsh -File scripts\Self-Check.ps1`
+The bus and all associated state follow `HF_BUS` (or an explicit `-Path`):
+inboxes, handoffs, status, protocol and default exports stay beside that bus.
+With no override, the production Council root is unchanged. Relative paths
+follow the PowerShell location; non-filesystem providers are rejected.
+
+Disposable tests:
+
+```powershell
+pwsh -NoProfile -File cli/tests/hf-bus.isolation.tests.ps1
+pwsh -NoProfile -File cli/tests/hf-bus.tests.ps1
+```
+
+`scripts/Self-Check.ps1` is an operational check: it posts a Council probe.
+Do not run it as a harmless governance check or infer authority from its example.
+Read [AGENTS.md](AGENTS.md) and [governance adoption](docs/GOVERNANCE-ADOPTION.md).
 
 ---
 
@@ -118,6 +131,10 @@ pwsh -File C:\WPAI\Software\StudioOps\cli\wpai.ps1 kill set loops true
 | Architecture | `C:\WPAI\AI-Research\AUTONOMOUS-AI-ARCHITECTURE.md` |
 
 Tests: `pwsh -File cli\tests\wpai.tests.ps1`
+
+That full control-plane suite writes real blackboard, approval-ticket and kill
+state using the configured studio root. It is not an isolated unit test; run it
+only with separate operational authority and a verified disposable environment.
 
 **Invariants:** no second task store; no unsupervised DistroKid/Bandcamp/YouTube/Gumroad publish.
 

@@ -40,30 +40,61 @@ $ErrorActionPreference = 'Stop'
 
 $script:HfBusDefaultDir = 'C:\WPAI\Workspace\.hellforge'
 $script:HfBusDefaultPath = 'C:\WPAI\Workspace\.hellforge\bus.jsonl'
-$script:HfHandoffsDir = 'C:\WPAI\Workspace\.hellforge\handoffs'
-$script:HfInboxDir = 'C:\WPAI\Workspace\.hellforge\inbox'
-$script:HfStatusPath = 'C:\WPAI\Workspace\.hellforge\STATUS.md'
-$script:HfProtocolPath = 'C:\WPAI\Workspace\.hellforge\PROTOCOL.md'
 
 function Get-HfBusPath {
     param([string]$Path)
-    if ($Path) { return $Path }
-    if ($env:HF_BUS) { return $env:HF_BUS }
-    return $script:HfBusDefaultPath
+    $candidate = if ($Path) { $Path } elseif ($env:HF_BUS) { $env:HF_BUS } else { $script:HfBusDefaultPath }
+    if ([string]::IsNullOrWhiteSpace($candidate)) { throw 'A bus file path is required.' }
+    $provider = $null
+    $drive = $null
+    $resolved = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($candidate, [ref]$provider, [ref]$drive)
+    if ($provider.Name -ne 'FileSystem') { throw 'The Council bus must use a filesystem path.' }
+    $leaf = [IO.Path]::GetFileName($resolved)
+    if (-not $leaf -or $leaf.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+        throw 'The Council bus path must name a valid file.'
+    }
+    return $resolved
+}
+
+function Get-HfCouncilPaths {
+    param([string]$Path)
+    # Resolve on every operation: HF_BUS or PowerShell location may have changed.
+    $bus = Get-HfBusPath -Path $Path
+    $root = [IO.Path]::GetDirectoryName($bus)
+    [pscustomobject]@{
+        Root = $root
+        Bus = $bus
+        Handoffs = Join-Path $root 'handoffs'
+        Inbox = Join-Path $root 'inbox'
+        Status = Join-Path $root 'STATUS.md'
+        Protocol = Join-Path $root 'PROTOCOL.md'
+        Exports = Join-Path $root 'exports'
+    }
+}
+
+function Assert-HfFileComponent {
+    param([string]$Value, [string]$Name)
+    if ([string]::IsNullOrWhiteSpace($Value) -or $Value -in @('.', '..') -or
+        $Value.IndexOfAny([char[]]'\/') -ge 0 -or
+        $Value.IndexOfAny([IO.Path]::GetInvalidFileNameChars()) -ge 0) {
+        throw "The Council $Name must be a single valid filename component."
+    }
 }
 
 function Ensure-HfCouncilDirs {
-    foreach ($d in @($script:HfBusDefaultDir, $script:HfHandoffsDir, $script:HfInboxDir)) {
+    param([string]$Path)
+    $council = Get-HfCouncilPaths -Path $Path
+    foreach ($d in @($council.Root, $council.Handoffs, $council.Inbox)) {
         if (-not (Test-Path -LiteralPath $d)) {
             New-Item -ItemType Directory -Force -Path $d | Out-Null
         }
     }
-    $bus = Get-HfBusPath
+    $bus = $council.Bus
     if (-not (Test-Path -LiteralPath $bus)) {
         New-Item -ItemType File -Force -Path $bus | Out-Null
     }
     foreach ($r in @('orchestrator', 'executor', 'director', 'all')) {
-        $p = Join-Path $script:HfInboxDir "$r.jsonl"
+        $p = Join-Path $council.Inbox "$r.jsonl"
         if (-not (Test-Path -LiteralPath $p)) {
             New-Item -ItemType File -Force -Path $p | Out-Null
         }
@@ -72,7 +103,7 @@ function Ensure-HfCouncilDirs {
 
 function Ensure-HfBus {
     param([string]$Path)
-    Ensure-HfCouncilDirs
+    Ensure-HfCouncilDirs -Path $Path
     $dir = Split-Path -Parent $Path
     if ($dir -and -not (Test-Path -LiteralPath $dir)) {
         New-Item -ItemType Directory -Force -Path $dir | Out-Null
@@ -108,10 +139,11 @@ function New-HfBusMessage {
         [string]$Ref,
         [string]$FilePath
     )
-    $bus = Get-HfBusPath -Path $Path
-    Ensure-HfBus -Path $bus
+    $council = Get-HfCouncilPaths -Path $Path
+    $bus = $council.Bus
     $role = Resolve-HfRole -From $From
     $to = if ($To) { $To.ToLowerInvariant() } else { 'all' }
+    Assert-HfFileComponent -Value $to -Name 'recipient'
     $text = ($Text -replace "`r`n", ' ' -replace "`n", ' ').Trim()
     if ([string]::IsNullOrWhiteSpace($text)) {
         throw 'Message text is required.'
@@ -136,6 +168,7 @@ function New-HfBusMessage {
     if ($FilePath) { $obj['path'] = $FilePath }
 
     $line = ($obj | ConvertTo-Json -Compress -Depth 6)
+    Ensure-HfBus -Path $bus
     Add-Content -LiteralPath $bus -Value $line -Encoding utf8
 
     # Mirror into directed inboxes
@@ -143,7 +176,7 @@ function New-HfBusMessage {
         if ($box -eq 'all' -and $to -ne 'all') {
             # still mirror to all inbox for visibility
         }
-        $inbox = Join-Path $script:HfInboxDir "$box.jsonl"
+        $inbox = Join-Path $council.Inbox "$box.jsonl"
         try {
             Add-Content -LiteralPath $inbox -Value $line -Encoding utf8
         } catch {
@@ -296,8 +329,9 @@ function Export-HfBusMarkdown {
 
 function Get-HfBusStatus {
     param([string]$Path)
-    Ensure-HfCouncilDirs
-    $bus = Get-HfBusPath -Path $Path
+    $council = Get-HfCouncilPaths -Path $Path
+    Ensure-HfCouncilDirs -Path $council.Bus
+    $bus = $council.Bus
     $msgs = @(Read-HfBus -Path $bus)
     $byFrom = @{}
     $byType = @{}
@@ -311,7 +345,7 @@ function Get-HfBusStatus {
     }
     $last = if ($msgs.Count -gt 0) { $msgs[-1] } else { $null }
     $info = Get-Item -LiteralPath $bus -ErrorAction SilentlyContinue
-    $handoffs = @(Get-ChildItem -LiteralPath $script:HfHandoffsDir -File -ErrorAction SilentlyContinue)
+    $handoffs = @(Get-ChildItem -LiteralPath $council.Handoffs -File -ErrorAction SilentlyContinue)
     [pscustomobject]@{
         Path          = $bus
         Exists         = [bool]$info
@@ -320,8 +354,8 @@ function Get-HfBusStatus {
         ByRole         = ($byFrom.GetEnumerator() | Sort-Object Name | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value }) -join ', '
         ByType         = ($byType.GetEnumerator() | Sort-Object Name | ForEach-Object { '{0}={1}' -f $_.Key, $_.Value }) -join ', '
         Handoffs       = $handoffs.Count
-        StatusPath     = $script:HfStatusPath
-        ProtocolPath   = $script:HfProtocolPath
+        StatusPath     = $council.Status
+        ProtocolPath   = $council.Protocol
         LastFrom       = if ($last) { Get-HfProp $last 'from' $null } else { $null }
         LastTo         = if ($last) { Get-HfProp $last 'to' $null } else { $null }
         LastType       = if ($last) { Get-HfProp $last 'type' $null } else { $null }
@@ -369,16 +403,19 @@ function Write-HfHandoffFile {
         [Parameter(Mandatory)][string]$Title,
         [string]$Body,
         [string]$SourceFile,
-        [string]$From
+        [string]$From,
+        [string]$Path
     )
-    Ensure-HfCouncilDirs
+    $council = Get-HfCouncilPaths -Path $Path
     $role = Resolve-HfRole -From $From
+    Assert-HfFileComponent -Value $role -Name 'handoff sender'
+    Ensure-HfCouncilDirs -Path $council.Bus
     $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
     $safe = ($Title -replace '[^\w\- ]', '' -replace '\s+', '-').Trim('-').ToLowerInvariant()
     if (-not $safe) { $safe = 'handoff' }
     if ($safe.Length -gt 40) { $safe = $safe.Substring(0, 40) }
     $name = '{0}-{1}-{2}.md' -f $stamp, $role, $safe
-    $dest = Join-Path $script:HfHandoffsDir $name
+    $dest = Join-Path $council.Handoffs $name
 
     if ($SourceFile) {
         if (-not (Test-Path -LiteralPath $SourceFile)) {
@@ -455,8 +492,14 @@ function hf-bus {
         [string]$Id
     )
 
-    Ensure-HfCouncilDirs
+    $council = Get-HfCouncilPaths -Path $Path
     $me = Resolve-HfRole -From $From
+    if ($Command -in @('say', 'ping', 'task', 'handoff', 'ack', 'done', 'block', 'approve_request', 'approve_result', 'budget', 'kill', 'blackboard_sync')) {
+        $recipient = if ($To) { $To.ToLowerInvariant() } else { 'all' }
+        Assert-HfFileComponent -Value $recipient -Name 'recipient'
+    }
+    if ($Command -eq 'handoff') { Assert-HfFileComponent -Value $me -Name 'handoff sender' }
+    Ensure-HfCouncilDirs -Path $council.Bus
 
     switch ($Command) {
         'say' {
@@ -476,7 +519,7 @@ function hf-bus {
         'handoff' {
             if (-not $Title) { $Title = 'Handoff' }
             if (-not $File -and -not $Body -and $Message) { $Body = $Message }
-            $dest = Write-HfHandoffFile -Title $Title -Body $Body -SourceFile $File -From $From
+            $dest = Write-HfHandoffFile -Title $Title -Body $Body -SourceFile $File -From $From -Path $council.Bus
             $summary = if ($Message) { $Message } else { "Handoff: $Title" }
             $posted = hf-say -Message $summary -To $To -From $From -Path $Path -Type 'handoff' -FilePath $dest
             $hid = Get-HfProp $posted 'id' '?'
@@ -518,10 +561,10 @@ function hf-bus {
             hf-say -Message $msg -To $To -From $From -Path $Path -Type 'blackboard_sync' -FilePath $File | Out-Null
         }
         'board' {
-            if (Test-Path -LiteralPath $script:HfStatusPath) {
-                Get-Content -LiteralPath $script:HfStatusPath -Encoding utf8
+            if (Test-Path -LiteralPath $council.Status) {
+                Get-Content -LiteralPath $council.Status -Encoding utf8
             } else {
-                Write-Host "No STATUS.md yet at $script:HfStatusPath" -ForegroundColor Yellow
+                Write-Host "No STATUS.md yet at $($council.Status)" -ForegroundColor Yellow
             }
         }
         'inbox' {
@@ -540,10 +583,10 @@ function hf-bus {
             }
         }
         'protocol' {
-            if (Test-Path -LiteralPath $script:HfProtocolPath) {
-                Get-Content -LiteralPath $script:HfProtocolPath -Encoding utf8
+            if (Test-Path -LiteralPath $council.Protocol) {
+                Get-Content -LiteralPath $council.Protocol -Encoding utf8
             } else {
-                Write-Host "Missing $script:HfProtocolPath" -ForegroundColor Yellow
+                Write-Host "Missing $($council.Protocol)" -ForegroundColor Yellow
             }
         }
         'tail' {
@@ -562,7 +605,7 @@ function hf-bus {
             Write-Output ("Messages:   {0}  ({1} bytes)" -f $s.Messages, $s.Bytes)
             Write-Output ("By role:    {0}" -f $(if ($s.ByRole) { $s.ByRole } else { '(none)' }))
             Write-Output ("By type:    {0}" -f $(if ($s.ByType) { $s.ByType } else { '(none)' }))
-            Write-Output ("Handoffs:   {0} in {1}" -f $s.Handoffs, $script:HfHandoffsDir)
+            Write-Output ("Handoffs:   {0} in {1}" -f $s.Handoffs, $council.Handoffs)
             Write-Output ("STATUS:     {0}" -f $s.StatusPath)
             Write-Output ("Protocol:   {0}" -f $s.ProtocolPath)
             Write-Output ("Your role:  {0}" -f $me)
@@ -571,7 +614,7 @@ function hf-bus {
         'export' {
             if (-not $OutFile) {
                 $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
-                $OutFile = Join-Path $script:HfBusDefaultDir ("exports\bus-{0}.md" -f $stamp)
+                $OutFile = Join-Path $council.Exports ("bus-{0}.md" -f $stamp)
             }
             $written = Export-HfBusMarkdown -Path $Path -OutFile $OutFile -Count $Count
             Write-Output ("Exported -> {0}" -f $written)
