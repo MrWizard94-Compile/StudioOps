@@ -1,0 +1,54 @@
+name: Validate Constitution adoption and bus isolation
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  governance:
+    # StudioOps is a Windows/PowerShell product with deliberate Windows defaults.
+    strategy:
+      fail-fast: false
+      matrix:
+        python: ['3.11', '3.12']
+    runs-on: windows-2025
+    steps:
+      - name: Set the initial branch for disposable checkout repositories
+        run: git config --global init.defaultBranch main
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          path: project
+          persist-credentials: false
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: MrWizard94-Compile/Agents-Constitution
+          ref: 0010a8353b00754fad31a30ed24327d3b6d05425
+          path: constitution
+          persist-credentials: false
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Validate accepted canonical source
+        working-directory: constitution
+        run: python tools/validate-source.py
+      - name: Test accepted canonical tools
+        working-directory: constitution
+        run: python -X utf8 -W error -m unittest discover -s tests -v
+      - name: Verify disposable bus isolation before the original suite
+        working-directory: project
+        shell: pwsh
+        run: ./cli/tests/hf-bus.isolation.tests.ps1
+      - name: Retain the original 24 bus assertions
+        working-directory: project
+        shell: pwsh
+        run: ./cli/tests/hf-bus.tests.ps1
+      - name: Verify positive project governance contracts
+        working-directory: project
+        run: python -B -X utf8 -W error -m unittest discover -s governance_tests -v
+      - name: Audit project adoption
+        working-directory: project
+        run: python ../constitution/tools/check-adoption.py .
