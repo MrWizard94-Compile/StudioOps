@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2adbf6b12547",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:31:38.7557916Z",
+  "money": false,
+  "metrics": {
+    "evidence_tier": "structural",
+    "files_ok": true,
+    "elapsed_ms": 4
+  },
+  "probe": "self-check",
+  "invert": "invert-assumption",
+  "hypothesis": "On observability, improve latency by applying cache via invert-assumption; validate with self-check.",
+  "lever": "latency",
+  "auto": true,
+  "tactic": "cache",
+  "target": "observability",
+  "evidence_tier": "structural"
+}

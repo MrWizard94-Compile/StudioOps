@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-4af73ac49e44",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:37:09.6175421Z",
+  "money": false,
+  "auto": true,
+  "invert": "invert-assumption",
+  "target": "observability",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 4,
+    "files_ok": true
+  },
+  "hypothesis": "On observability, improve reliability by applying double-entry via invert-assumption; validate with static-score.",
+  "lever": "reliability",
+  "tactic": "double-entry",
+  "evidence_tier": "structural",
+  "probe": "static-score"
+}

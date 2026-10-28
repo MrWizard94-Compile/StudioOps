@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f9309224e1eb",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:29:07.9500567Z",
+  "money": false,
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 5,
+    "files_ok": true
+  },
+  "auto": true,
+  "evidence_tier": "structural",
+  "invert": "guess-then-falsify",
+  "target": "observability",
+  "tactic": "cache",
+  "probe": "grep-fit",
+  "hypothesis": "On observability, improve latency by applying cache via guess-then-falsify; validate with grep-fit.",
+  "lever": "latency"
+}

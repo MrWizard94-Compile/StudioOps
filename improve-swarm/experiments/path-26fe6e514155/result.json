@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-26fe6e514155",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:06:11.5045448Z",
+  "money": false,
+  "hypothesis": "On token-budget, improve determinism by applying bus-not-call via copy-domain-foreign; validate with micro-bench.",
+  "target": "token-budget",
+  "invert": "copy-domain-foreign",
+  "evidence_tier": "measured",
+  "tactic": "bus-not-call",
+  "metrics": {
+    "files_ok": true,
+    "balanced": true,
+    "evidence_tier": "measured",
+    "elapsed_ms": 56
+  },
+  "probe": "micro-bench",
+  "lever": "determinism",
+  "auto": true
+}

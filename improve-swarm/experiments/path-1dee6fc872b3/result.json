@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1dee6fc872b3",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:39:56.2759280Z",
+  "money": false,
+  "hypothesis": "On observability, improve determinism by applying cache via borrow-from-avionics; validate with property-quick.",
+  "invert": "borrow-from-avionics",
+  "tactic": "cache",
+  "target": "observability",
+  "metrics": {
+    "elapsed_ms": 0
+  },
+  "auto": true,
+  "lever": "determinism",
+  "probe": "property-quick"
+}

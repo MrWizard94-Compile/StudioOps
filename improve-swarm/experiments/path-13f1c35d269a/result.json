@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-13f1c35d269a",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=225 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:50:03.4767590Z",
+  "money": false,
+  "metrics": {
+    "ms": 225.0,
+    "elapsed_ms": 297,
+    "files_ok": true,
+    "ban_gene_signal": -1.0,
+    "evidence_tier": "measured"
+  },
+  "lever": "determinism",
+  "evidence_tier": "measured",
+  "hypothesis": "On studioops-cli, improve determinism by applying measurement-first via borrow-from-avionics; validate with property-quick.",
+  "invert": "borrow-from-avionics",
+  "probe": "property-quick",
+  "tactic": "measurement-first",
+  "target": "studioops-cli",
+  "auto": true
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-580f36e5f353",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:50:17.5762490Z",
+  "money": false,
+  "lever": "token-cost",
+  "tactic": "measurement-first",
+  "invert": "remove-instead-of-add",
+  "hypothesis": "On overnight, improve token-cost by applying measurement-first via remove-instead-of-add; validate with grep-fit.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "elapsed_ms": 87,
+    "kill_blocks": true
+  },
+  "evidence_tier": "measured",
+  "probe": "grep-fit",
+  "target": "overnight"
+}

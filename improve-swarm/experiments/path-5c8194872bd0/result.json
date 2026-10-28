@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-5c8194872bd0",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:46:12.1994091Z",
+  "money": false,
+  "target": "observability",
+  "tactic": "measurement-first",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 3,
+    "evidence_tier": "structural"
+  },
+  "evidence_tier": "structural",
+  "invert": "less-agent-more-script",
+  "probe": "static-score",
+  "hypothesis": "On observability, improve reliability by applying measurement-first via less-agent-more-script; validate with static-score.",
+  "auto": true,
+  "lever": "reliability"
+}

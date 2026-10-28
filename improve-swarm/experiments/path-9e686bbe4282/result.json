@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-9e686bbe4282",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:38:11.5515456Z",
+  "money": false,
+  "target": "observability",
+  "probe": "unit-test",
+  "evidence_tier": "structural",
+  "auto": true,
+  "lever": "reliability",
+  "tactic": "janus-not-direct-write",
+  "hypothesis": "On observability, improve reliability by applying janus-not-direct-write via slow-down-to-speed-up; validate with unit-test.",
+  "invert": "slow-down-to-speed-up",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 5,
+    "evidence_tier": "structural"
+  }
+}

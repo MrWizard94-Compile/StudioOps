@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d99070efeef4",
+  "verdict": "INCONCLUSIVE",
+  "note": "self-swarm v2 surface present (structural only — not a measured improvement)",
+  "source": "auto-experiment",
+  "ts": "2026-07-12T14:58:50.6991364Z",
+  "money": false,
+  "hypothesis": "On improve-swarm, improve throughput by applying genome-mutate via auto-before-human-for-drafts; validate with property-quick.",
+  "auto": true,
+  "probe": "property-quick",
+  "target": "improve-swarm",
+  "lever": "throughput",
+  "invert": "auto-before-human-for-drafts",
+  "evidence_tier": "structural",
+  "metrics": {
+    "has_evidence_tier": true,
+    "has_self": true,
+    "has_stagnation": true,
+    "files_ok": true,
+    "has_auto": true,
+    "elapsed_ms": 9,
+    "evidence_tier": "structural",
+    "has_unleash": true
+  },
+  "tactic": "genome-mutate"
+}

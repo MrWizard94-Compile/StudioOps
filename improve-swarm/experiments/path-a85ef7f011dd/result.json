@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-a85ef7f011dd",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:57:08.5956596Z",
+  "money": false,
+  "lever": "throughput",
+  "probe": "unit-test",
+  "tactic": "genome-mutate",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 5,
+    "files_ok": true
+  },
+  "invert": "less-agent-more-script",
+  "evidence_tier": "structural",
+  "target": "observability",
+  "hypothesis": "On observability, improve throughput by applying genome-mutate via less-agent-more-script; validate with unit-test.",
+  "auto": true
+}

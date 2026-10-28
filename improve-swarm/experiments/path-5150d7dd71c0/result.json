@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-5150d7dd71c0",
+  "verdict": "INCONCLUSIVE",
+  "note": "self-swarm v2 surface present (structural only — not a measured improvement)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:34:00.7436431Z",
+  "money": false,
+  "lever": "observability",
+  "hypothesis": "On studioops-cli, improve observability by applying queue via remove-instead-of-add; validate with micro-bench.",
+  "probe": "micro-bench",
+  "evidence_tier": "structural",
+  "metrics": {
+    "elapsed_ms": 3,
+    "has_unleash": true,
+    "evidence_tier": "structural",
+    "has_stagnation": true,
+    "has_self": true,
+    "has_auto": true,
+    "has_evidence_tier": true,
+    "files_ok": true
+  },
+  "target": "studioops-cli",
+  "auto": true,
+  "tactic": "queue",
+  "invert": "remove-instead-of-add"
+}

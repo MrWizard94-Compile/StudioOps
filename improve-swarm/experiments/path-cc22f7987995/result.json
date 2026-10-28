@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-cc22f7987995",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:00:19.0822345Z",
+  "money": false,
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 5,
+    "evidence_tier": "structural"
+  },
+  "hypothesis": "On observability, improve latency by applying cache via slow-down-to-speed-up; validate with grep-fit.",
+  "evidence_tier": "structural",
+  "lever": "latency",
+  "target": "observability",
+  "tactic": "cache",
+  "probe": "grep-fit",
+  "invert": "slow-down-to-speed-up"
+}

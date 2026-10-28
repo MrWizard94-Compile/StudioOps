@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3ad30dce9a07",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:50:17.1467088Z",
+  "money": false,
+  "lever": "throughput",
+  "tactic": "double-entry",
+  "invert": "measure-then-guess",
+  "hypothesis": "On token-budget, improve throughput by applying double-entry via measure-then-guess; validate with static-score.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "balanced": true,
+    "elapsed_ms": 80,
+    "evidence_tier": "measured"
+  },
+  "evidence_tier": "measured",
+  "probe": "static-score",
+  "target": "token-budget"
+}

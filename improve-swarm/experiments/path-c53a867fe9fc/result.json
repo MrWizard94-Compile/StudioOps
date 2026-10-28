@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c53a867fe9fc",
+  "verdict": "SUPPORTED",
+  "note": "self-inject + unleash + auto-experiment present",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:04.1575114Z",
+  "money": false,
+  "tactic": "genome-mutate",
+  "metrics": {
+    "files_ok": true,
+    "has_unleash": true,
+    "has_auto": true,
+    "has_self": true,
+    "elapsed_ms": 2
+  },
+  "probe": "docs-delta",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve throughput by applying genome-mutate via borrow-from-idle-games; validate with docs-delta.",
+  "lever": "throughput",
+  "target": "improve-swarm",
+  "invert": "borrow-from-idle-games"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-e5526feb4429",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:07:42.9404206Z",
+  "money": false,
+  "evidence_tier": "measured",
+  "lever": "determinism",
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "elapsed_ms": 159,
+    "kill_blocks": true
+  },
+  "probe": "docs-delta",
+  "target": "overnight",
+  "invert": "guess-then-falsify",
+  "hypothesis": "On overnight, improve determinism by applying measurement-first via guess-then-falsify; validate with docs-delta.",
+  "auto": true,
+  "tactic": "measurement-first"
+}

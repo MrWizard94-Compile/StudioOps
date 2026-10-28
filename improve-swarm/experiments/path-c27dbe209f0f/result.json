@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c27dbe209f0f",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=245 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:39:28.6370883Z",
+  "money": false,
+  "tactic": "cache",
+  "metrics": {
+    "ms": 245.1,
+    "evidence_tier": "measured",
+    "elapsed_ms": 324,
+    "files_ok": true,
+    "ban_gene_signal": -1.0
+  },
+  "invert": "guess-then-falsify",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve throughput by applying cache via guess-then-falsify; validate with property-quick.",
+  "probe": "property-quick",
+  "evidence_tier": "measured",
+  "target": "studioops-cli",
+  "lever": "throughput"
+}

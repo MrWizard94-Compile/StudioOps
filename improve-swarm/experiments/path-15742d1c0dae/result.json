@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-15742d1c0dae",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:43:32.3615982Z",
+  "money": false,
+  "metrics": {
+    "elapsed_ms": 43,
+    "files_ok": true,
+    "balanced": true,
+    "evidence_tier": "measured"
+  },
+  "hypothesis": "On token-budget, improve throughput by applying invert-control via borrow-from-idle-games; validate with property-quick.",
+  "probe": "property-quick",
+  "lever": "throughput",
+  "evidence_tier": "measured",
+  "invert": "borrow-from-idle-games",
+  "tactic": "invert-control",
+  "target": "token-budget",
+  "auto": true
+}

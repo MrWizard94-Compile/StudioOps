@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-142f74b5fb89",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:36:17.0437979Z",
+  "money": false,
+  "tactic": "double-entry",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 3,
+    "evidence_tier": "structural"
+  },
+  "probe": "docs-delta",
+  "invert": "human-before-auto",
+  "lever": "determinism",
+  "auto": true,
+  "hypothesis": "On observability, improve determinism by applying double-entry via human-before-auto; validate with docs-delta.",
+  "target": "observability",
+  "evidence_tier": "structural"
+}

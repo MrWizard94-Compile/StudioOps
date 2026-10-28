@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-df70f9353011",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:10:06.4655129Z",
+  "money": false,
+  "target": "observability",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 5,
+    "evidence_tier": "structural"
+  },
+  "probe": "docs-delta",
+  "lever": "reliability",
+  "hypothesis": "On observability, improve reliability by applying fuzz via do-opposite; validate with docs-delta.",
+  "evidence_tier": "structural",
+  "auto": true,
+  "invert": "do-opposite",
+  "tactic": "fuzz"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-b383f2c24254",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.9361358Z",
+  "money": false,
+  "target": "token-budget",
+  "metrics": {
+    "elapsed_ms": 13,
+    "evidence_tier": "measured",
+    "balanced": true,
+    "files_ok": true
+  },
+  "probe": "unit-test",
+  "invert": "borrow-from-accounting",
+  "tactic": "double-entry",
+  "lever": "idempotency",
+  "hypothesis": "On token-budget, improve idempotency by applying double-entry via borrow-from-accounting; validate with unit-test.",
+  "evidence_tier": "measured",
+  "auto": true
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-4c7372fb05a7",
+  "verdict": "SUPPORTED",
+  "note": "single-writer bans/outcomes paths exist",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:52:47.5586474Z",
+  "money": false,
+  "auto": true,
+  "invert": "auto-before-human-for-drafts",
+  "tactic": "janus-not-direct-write",
+  "probe": "property-quick",
+  "target": "improve-swarm",
+  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via auto-before-human-for-drafts; validate with property-quick.",
+  "metrics": {
+    "bans_exists": true,
+    "files_ok": true,
+    "bans_path": "C:\\WPAI\\Workspace\\.wpai\\improve-swarm\\bans.json",
+    "elapsed_ms": 21,
+    "evidence_tier": "structural"
+  },
+  "lever": "latency",
+  "evidence_tier": "structural"
+}

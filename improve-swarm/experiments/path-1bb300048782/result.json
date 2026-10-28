@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1bb300048782",
+  "verdict": "SUPPORTED",
+  "note": "static self-fit score=0.733",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:03.5190750Z",
+  "money": false,
+  "tactic": "janus-not-direct-write",
+  "metrics": {
+    "banned": false,
+    "elapsed_ms": 32,
+    "score": 0.733,
+    "files_ok": true
+  },
+  "probe": "grep-fit",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via do-opposite; validate with grep-fit.",
+  "lever": "latency",
+  "target": "improve-swarm",
+  "invert": "do-opposite"
+}

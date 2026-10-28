@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-394a77bec2f7",
+  "verdict": "KILLED",
+  "note": "ban/diversity/score fail ban=True score=0.016",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.3884564Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "banned_score": 0.016,
+    "elapsed_ms": 141,
+    "diverse_targets": 1,
+    "ban_raise_context_latency": true,
+    "files_ok": true,
+    "evidence_tier": "strong"
+  },
+  "probe": "grep-fit",
+  "invert": "slow-down-to-speed-up",
+  "tactic": "fail-closed",
+  "lever": "throughput",
+  "hypothesis": "On improve-swarm, improve throughput by applying fail-closed via slow-down-to-speed-up; validate with grep-fit.",
+  "evidence_tier": "strong",
+  "auto": true
+}

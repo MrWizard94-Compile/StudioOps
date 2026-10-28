@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-10803ffba297",
+  "verdict": "KILLED",
+  "note": "ban/diversity/score fail ban=True score=0.016",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.2038887Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "banned_score": 0.016,
+    "elapsed_ms": 113,
+    "diverse_targets": 1,
+    "ban_raise_context_latency": true,
+    "files_ok": true,
+    "evidence_tier": "strong"
+  },
+  "probe": "property-quick",
+  "invert": "guess-then-falsify",
+  "tactic": "property-test",
+  "lever": "reliability",
+  "hypothesis": "On improve-swarm, improve reliability by applying property-test via guess-then-falsify; validate with property-quick.",
+  "evidence_tier": "strong",
+  "auto": true
+}

@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-11a7c0d8ef4a",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=297 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:50:17.0368493Z",
+  "money": false,
+  "lever": "throughput",
+  "tactic": "cache",
+  "invert": "auto-before-human-for-drafts",
+  "hypothesis": "On studioops-cli, improve throughput by applying cache via auto-before-human-for-drafts; validate with micro-bench.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 411,
+    "ms": 296.6,
+    "ban_gene_signal": -1.0,
+    "evidence_tier": "measured"
+  },
+  "evidence_tier": "measured",
+  "probe": "micro-bench",
+  "target": "studioops-cli"
+}

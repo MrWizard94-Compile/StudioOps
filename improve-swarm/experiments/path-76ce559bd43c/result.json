@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-76ce559bd43c",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=267 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:03:27.9853328Z",
+  "money": false,
+  "hypothesis": "On studioops-cli, improve throughput by applying cache via auto-before-human-for-drafts; validate with property-quick.",
+  "auto": true,
+  "lever": "throughput",
+  "invert": "auto-before-human-for-drafts",
+  "evidence_tier": "measured",
+  "tactic": "cache",
+  "target": "studioops-cli",
+  "probe": "property-quick",
+  "metrics": {
+    "evidence_tier": "measured",
+    "ban_gene_signal": -1.0,
+    "elapsed_ms": 350,
+    "ms": 266.7,
+    "files_ok": true
+  }
+}

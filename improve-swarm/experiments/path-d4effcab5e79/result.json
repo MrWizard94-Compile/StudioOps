@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d4effcab5e79",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:39:51.8627930Z",
+  "money": false,
+  "hypothesis": "On observability, improve token-cost by applying property-test via borrow-from-idle-games; validate with docs-delta.",
+  "invert": "borrow-from-idle-games",
+  "tactic": "property-test",
+  "target": "observability",
+  "metrics": {
+    "elapsed_ms": 0
+  },
+  "auto": true,
+  "lever": "token-cost",
+  "probe": "docs-delta"
+}

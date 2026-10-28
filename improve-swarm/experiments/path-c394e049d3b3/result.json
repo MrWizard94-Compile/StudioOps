@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c394e049d3b3",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:01:04.1267198Z",
+  "money": false,
+  "auto": true,
+  "metrics": {
+    "elapsed_ms": 151,
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "kill_blocks": true
+  },
+  "lever": "reliability",
+  "invert": "less-script-more-agent",
+  "evidence_tier": "measured",
+  "hypothesis": "On overnight, improve reliability by applying double-entry via less-script-more-agent; validate with schema-validate.",
+  "tactic": "double-entry",
+  "probe": "schema-validate",
+  "target": "overnight"
+}

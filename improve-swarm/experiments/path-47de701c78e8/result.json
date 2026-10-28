@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-47de701c78e8",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:12:45.0482967Z",
+  "money": false,
+  "evidence_tier": "measured",
+  "auto": true,
+  "hypothesis": "On token-budget, improve latency by applying fuzz via copy-domain-foreign; validate with dry-run-script.",
+  "metrics": {
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "balanced": true,
+    "elapsed_ms": 59
+  },
+  "probe": "dry-run-script",
+  "target": "token-budget",
+  "lever": "latency",
+  "invert": "copy-domain-foreign",
+  "tactic": "fuzz"
+}

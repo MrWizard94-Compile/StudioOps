@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3fefe827d4e9",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:57:46.4214806Z",
+  "money": false,
+  "auto": true,
+  "metrics": {
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "elapsed_ms": 52,
+    "balanced": true
+  },
+  "target": "token-budget",
+  "invert": "human-before-auto",
+  "tactic": "fuzz",
+  "probe": "dry-run-script",
+  "evidence_tier": "measured",
+  "lever": "latency",
+  "hypothesis": "On token-budget, improve latency by applying fuzz via human-before-auto; validate with dry-run-script."
+}

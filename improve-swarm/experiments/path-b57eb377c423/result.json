@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-b57eb377c423",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.7163201Z",
+  "money": false,
+  "target": "overnight",
+  "metrics": {
+    "evidence_tier": "measured",
+    "kill_blocks": true,
+    "elapsed_ms": 72,
+    "files_ok": true
+  },
+  "probe": "property-quick",
+  "invert": "borrow-from-compilers",
+  "tactic": "queue",
+  "lever": "reliability",
+  "hypothesis": "On overnight, improve reliability by applying queue via borrow-from-compilers; validate with property-quick.",
+  "evidence_tier": "measured",
+  "auto": true
+}

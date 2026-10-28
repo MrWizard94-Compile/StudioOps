@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d9eb410791be",
+  "verdict": "SUPPORTED",
+  "note": "outcomes append + elite archive count=30",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:03.4070245Z",
+  "money": false,
+  "tactic": "double-entry",
+  "metrics": {
+    "outcomes_grew": true,
+    "elapsed_ms": 82,
+    "elite_count": 30,
+    "files_ok": true
+  },
+  "probe": "schema-validate",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via invert-assumption; validate with schema-validate.",
+  "lever": "throughput",
+  "target": "improve-swarm",
+  "invert": "invert-assumption"
+}

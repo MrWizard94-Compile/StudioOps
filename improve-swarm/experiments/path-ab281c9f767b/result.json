@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ab281c9f767b",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=265 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:57:46.2458220Z",
+  "money": false,
+  "auto": true,
+  "metrics": {
+    "elapsed_ms": 361,
+    "files_ok": true,
+    "ban_gene_signal": -1.0,
+    "ms": 265.2,
+    "evidence_tier": "measured"
+  },
+  "target": "studioops-cli",
+  "invert": "borrow-from-avionics",
+  "tactic": "cache",
+  "probe": "unit-test",
+  "evidence_tier": "measured",
+  "lever": "throughput",
+  "hypothesis": "On studioops-cli, improve throughput by applying cache via borrow-from-avionics; validate with unit-test."
+}

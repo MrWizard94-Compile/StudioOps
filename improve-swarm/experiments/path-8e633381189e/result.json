@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-8e633381189e",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:54:42.1921613Z",
+  "money": false,
+  "probe": "grep-fit",
+  "invert": "guess-then-falsify",
+  "target": "studioops-blackboard",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying blackboard-not-chat via guess-then-falsify",
+  "metrics": {
+    "shape_ok": true,
+    "elapsed_ms": 22,
+    "evidence_tier": "measured",
+    "files_ok": true
+  },
+  "auto": true,
+  "evidence_tier": "measured",
+  "lever": "reliability",
+  "tactic": "blackboard-not-chat"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7d61dc66f9c7",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:54:42.1274298Z",
+  "money": false,
+  "probe": "static-score",
+  "invert": "none",
+  "target": "overnight",
+  "hypothesis": "",
+  "metrics": {
+    "elapsed_ms": 75,
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "kill_blocks": true
+  },
+  "auto": true,
+  "evidence_tier": "measured",
+  "lever": "determinism",
+  "tactic": "bus-not-call"
+}

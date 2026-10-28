@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-eaaee324f46f",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=247 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T22:33:57.1672503Z",
+  "money": false,
+  "tactic": "measurement-first",
+  "auto": true,
+  "target": "improve-swarm",
+  "metrics": {
+    "elapsed_ms": 344,
+    "ms": 247.0,
+    "evidence_tier": "measured",
+    "ban_gene_signal": -1.0,
+    "files_ok": true
+  },
+  "invert": "measure-then-guess",
+  "evidence_tier": "measured",
+  "hypothesis": "On improve-swarm, improve determinism by applying measurement-first via measure-then-guess; validate with micro-bench.",
+  "probe": "micro-bench",
+  "lever": "determinism"
+}

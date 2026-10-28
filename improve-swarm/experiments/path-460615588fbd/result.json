@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-460615588fbd",
+  "verdict": "INCONCLUSIVE",
+  "note": "static fit 0.6809 — needs deeper micro-impl",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:36:53.6728377Z",
+  "money": false,
+  "probe": "property-quick",
+  "evidence_tier": "weak",
+  "auto": true,
+  "invert": "slow-down-to-speed-up",
+  "tactic": "invert-control",
+  "lever": "throughput",
+  "metrics": {
+    "evidence_tier": "weak",
+    "score": 0.6809,
+    "banned": false,
+    "elapsed_ms": 273,
+    "stagnation_pen": 0.025,
+    "files_ok": true
+  },
+  "hypothesis": "On improve-swarm, improve throughput by applying invert-control via slow-down-to-speed-up; validate with property-quick.",
+  "target": "improve-swarm"
+}

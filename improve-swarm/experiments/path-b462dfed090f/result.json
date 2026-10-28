@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-b462dfed090f",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.6022480Z",
+  "money": false,
+  "target": "observability",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 4,
+    "files_ok": true
+  },
+  "probe": "dry-run-script",
+  "invert": "less-agent-more-script",
+  "tactic": "measurement-first",
+  "lever": "reliability",
+  "hypothesis": "On observability, improve reliability by applying measurement-first via less-agent-more-script; validate with dry-run-script.",
+  "evidence_tier": "structural",
+  "auto": true
+}

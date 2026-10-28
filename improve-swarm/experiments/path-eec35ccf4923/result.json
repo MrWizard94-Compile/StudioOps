@@ -1,0 +1,20 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-eec35ccf4923",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:39:51.9199124Z",
+  "money": false,
+  "hypothesis": "On token-budget, improve idempotency by applying fuzz via borrow-from-idle-games; validate with static-score.",
+  "invert": "borrow-from-idle-games",
+  "tactic": "fuzz",
+  "target": "token-budget",
+  "metrics": {
+    "balanced": true,
+    "elapsed_ms": 20
+  },
+  "auto": true,
+  "lever": "idempotency",
+  "probe": "static-score"
+}

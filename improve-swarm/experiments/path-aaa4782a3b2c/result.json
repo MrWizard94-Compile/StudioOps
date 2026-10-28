@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-aaa4782a3b2c",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:55:07.4997849Z",
+  "money": false,
+  "auto": true,
+  "invert": "borrow-from-accounting",
+  "metrics": {
+    "elapsed_ms": 4,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "tactic": "janus-not-direct-write",
+  "probe": "property-quick",
+  "target": "observability",
+  "lever": "reliability",
+  "hypothesis": "On observability, improve reliability by applying janus-not-direct-write via borrow-from-accounting; validate with property-quick.",
+  "evidence_tier": "structural"
+}

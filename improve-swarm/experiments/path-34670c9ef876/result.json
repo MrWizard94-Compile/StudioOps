@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-34670c9ef876",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:02:06.0299940Z",
+  "money": false,
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "structural",
+    "elapsed_ms": 6
+  },
+  "lever": "latency",
+  "invert": "remove-instead-of-add",
+  "evidence_tier": "structural",
+  "auto": true,
+  "target": "observability",
+  "tactic": "fuzz",
+  "hypothesis": "On observability, improve latency by applying fuzz via remove-instead-of-add; validate with schema-validate.",
+  "probe": "schema-validate"
+}

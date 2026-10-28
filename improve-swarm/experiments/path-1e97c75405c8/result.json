@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1e97c75405c8",
+  "verdict": "SUPPORTED",
+  "note": "self-swarm v2 surface complete (stag+tier+unleash)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.4285066Z",
+  "money": false,
+  "target": "studioops-cli",
+  "metrics": {
+    "has_self": true,
+    "has_stagnation": true,
+    "has_evidence_tier": true,
+    "elapsed_ms": 2,
+    "has_unleash": true,
+    "has_auto": true,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "probe": "self-check",
+  "invert": "do-opposite",
+  "tactic": "genome-mutate",
+  "lever": "latency",
+  "hypothesis": "On studioops-cli, improve latency by applying genome-mutate via do-opposite; validate with self-check.",
+  "evidence_tier": "structural",
+  "auto": true
+}

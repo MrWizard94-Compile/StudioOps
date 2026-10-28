@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3d126a562823",
+  "verdict": "SUPPORTED",
+  "note": "self-meta measurement ms=35",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:49.2441214Z",
+  "money": false,
+  "target": "studioops-cli",
+  "tactic": "measurement-first",
+  "auto": true,
+  "lever": "token-cost",
+  "hypothesis": "On studioops-cli, improve token-cost by applying measurement-first via copy-domain-foreign; validate with property-quick.",
+  "invert": "copy-domain-foreign",
+  "probe": "property-quick",
+  "metrics": {
+    "ms": 35,
+    "files_ok": true,
+    "elapsed_ms": 35
+  }
+}

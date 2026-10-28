@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-02da6b142c50",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:06:11.3247543Z",
+  "money": false,
+  "hypothesis": "On observability, improve reliability by applying janus-not-direct-write via less-script-more-agent; validate with dry-run-script.",
+  "target": "observability",
+  "invert": "less-script-more-agent",
+  "evidence_tier": "structural",
+  "tactic": "janus-not-direct-write",
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "structural",
+    "elapsed_ms": 5
+  },
+  "probe": "dry-run-script",
+  "lever": "reliability",
+  "auto": true
+}

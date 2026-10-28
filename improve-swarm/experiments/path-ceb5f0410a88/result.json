@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ceb5f0410a88",
+  "verdict": "SUPPORTED",
+  "note": "ledger append+dedupe ok elite=12",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:43:45.2197971Z",
+  "money": false,
+  "metrics": {
+    "files_ok": true,
+    "elite_count": 12,
+    "elapsed_ms": 315,
+    "dedupe_ok": true,
+    "outcomes_grew": true,
+    "evidence_tier": "measured"
+  },
+  "probe": "grep-fit",
+  "hypothesis": "On studioops-cli, improve determinism by applying double-entry via guess-then-falsify; validate with grep-fit.",
+  "lever": "determinism",
+  "evidence_tier": "measured",
+  "invert": "guess-then-falsify",
+  "tactic": "double-entry",
+  "target": "studioops-cli",
+  "auto": true
+}

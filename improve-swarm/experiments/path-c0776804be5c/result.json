@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c0776804be5c",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:11:10.7706261Z",
+  "money": false,
+  "auto": true,
+  "lever": "latency",
+  "probe": "micro-bench",
+  "hypothesis": "On token-budget, improve latency by applying fuzz via auto-before-human-for-drafts; validate with micro-bench.",
+  "evidence_tier": "measured",
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "elapsed_ms": 57,
+    "balanced": true
+  },
+  "tactic": "fuzz",
+  "target": "token-budget",
+  "invert": "auto-before-human-for-drafts"
+}

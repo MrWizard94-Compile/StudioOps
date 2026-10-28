@@ -1,0 +1,19 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2f3520160424",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:44:58.9262924Z",
+  "money": false,
+  "tactic": "cache",
+  "metrics": {
+    "elapsed_ms": 3
+  },
+  "probe": "unit-test",
+  "auto": true,
+  "hypothesis": "On observability, improve determinism by applying cache via less-agent-more-script; validate with unit-test.",
+  "lever": "determinism",
+  "target": "observability",
+  "invert": "less-agent-more-script"
+}

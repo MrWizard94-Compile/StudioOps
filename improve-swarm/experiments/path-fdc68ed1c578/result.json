@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-fdc68ed1c578",
+  "verdict": "SUPPORTED",
+  "note": "status survives chaos check catalog=212",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:40:54.1087023Z",
+  "money": false,
+  "target": "improve-swarm",
+  "tactic": "fuzz",
+  "auto": true,
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying fuzz via measure-then-guess; validate with self-check.",
+  "invert": "measure-then-guess",
+  "probe": "self-check",
+  "metrics": {
+    "status_ok": true,
+    "elapsed_ms": 104,
+    "files_ok": true
+  }
+}

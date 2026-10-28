@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c13a7548cf7f",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:50:17.6822386Z",
+  "money": false,
+  "lever": "latency",
+  "tactic": "genome-mutate",
+  "invert": "auto-before-human-for-drafts",
+  "hypothesis": "On token-budget, improve latency by applying genome-mutate via auto-before-human-for-drafts; validate with dry-run-script.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "balanced": true,
+    "elapsed_ms": 57,
+    "evidence_tier": "measured"
+  },
+  "evidence_tier": "measured",
+  "probe": "dry-run-script",
+  "target": "token-budget"
+}

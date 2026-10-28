@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1198df79b743",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:47:37.3151892Z",
+  "money": false,
+  "lever": "determinism",
+  "hypothesis": "On studioops-blackboard, improve determinism by applying bus-not-call via auto-before-human-for-drafts; validate with property-quick.",
+  "probe": "property-quick",
+  "metrics": {
+    "elapsed_ms": 28,
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "shape_ok": true
+  },
+  "target": "studioops-blackboard",
+  "auto": true,
+  "evidence_tier": "measured",
+  "invert": "auto-before-human-for-drafts",
+  "tactic": "bus-not-call"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f07ea9076add",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:41:35.0519594Z",
+  "money": false,
+  "target": "token-budget",
+  "lever": "determinism",
+  "auto": true,
+  "probe": "static-score",
+  "metrics": {
+    "evidence_tier": "measured",
+    "balanced": true,
+    "files_ok": true,
+    "elapsed_ms": 57
+  },
+  "invert": "borrow-from-compilers",
+  "evidence_tier": "measured",
+  "hypothesis": "On token-budget, improve determinism by applying cache via borrow-from-compilers; validate with static-score.",
+  "tactic": "cache"
+}

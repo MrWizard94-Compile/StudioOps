@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-6ad8eae528ea",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.8831519Z",
+  "money": false,
+  "target": "overnight",
+  "metrics": {
+    "evidence_tier": "measured",
+    "kill_blocks": true,
+    "elapsed_ms": 64,
+    "files_ok": true
+  },
+  "probe": "dry-run-script",
+  "invert": "measure-then-guess",
+  "tactic": "chaos-inject",
+  "lever": "reliability",
+  "hypothesis": "On overnight, improve reliability by applying chaos-inject via measure-then-guess; validate with dry-run-script.",
+  "evidence_tier": "measured",
+  "auto": true
+}

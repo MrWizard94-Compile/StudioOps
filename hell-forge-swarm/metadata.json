@@ -1,0 +1,8 @@
+{
+  "name": "Hell Forge Swarm",
+  "description": "An autonomous double-incineration compiler sandbox that spawns hellish agent swarms to optimize your React codebase.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

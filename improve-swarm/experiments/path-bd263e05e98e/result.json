@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-bd263e05e98e",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T15:27:35.5299480Z",
+  "money": false,
+  "auto": true,
+  "invert": "borrow-from-accounting",
+  "lever": "throughput",
+  "evidence_tier": "measured",
+  "tactic": "invert-control",
+  "target": "token-budget",
+  "probe": "micro-bench",
+  "metrics": {
+    "evidence_tier": "measured",
+    "balanced": true,
+    "elapsed_ms": 68,
+    "files_ok": true
+  },
+  "hypothesis": "On token-budget, improve throughput by applying invert-control via borrow-from-accounting; validate with micro-bench."
+}

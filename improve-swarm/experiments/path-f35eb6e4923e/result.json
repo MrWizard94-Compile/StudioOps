@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f35eb6e4923e",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:57.0231794Z",
+  "money": false,
+  "target": "observability",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 0,
+    "files_ok": true
+  },
+  "probe": "dry-run-script",
+  "invert": "measure-then-guess",
+  "tactic": "event-source",
+  "lever": "determinism",
+  "hypothesis": "On observability, improve determinism by applying event-source via measure-then-guess; validate with dry-run-script.",
+  "evidence_tier": "structural",
+  "auto": true
+}

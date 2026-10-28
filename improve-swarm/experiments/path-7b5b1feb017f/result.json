@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7b5b1feb017f",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:31:51.7372281Z",
+  "money": false,
+  "lever": "latency",
+  "hypothesis": "On token-budget, improve latency by applying genome-mutate via borrow-from-idle-games; validate with property-quick.",
+  "probe": "property-quick",
+  "evidence_tier": "measured",
+  "metrics": {
+    "balanced": true,
+    "elapsed_ms": 35,
+    "files_ok": true,
+    "evidence_tier": "measured"
+  },
+  "target": "token-budget",
+  "auto": true,
+  "tactic": "genome-mutate",
+  "invert": "borrow-from-idle-games"
+}

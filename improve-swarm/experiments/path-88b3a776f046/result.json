@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-88b3a776f046",
+  "verdict": "SUPPORTED",
+  "note": "ledger append+dedupe ok elite=11",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:40:08.7773138Z",
+  "money": false,
+  "lever": "throughput",
+  "tactic": "double-entry",
+  "target": "improve-swarm",
+  "evidence_tier": "measured",
+  "probe": "self-check",
+  "invert": "less-agent-more-script",
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via less-agent-more-script; validate with self-check.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "outcomes_grew": true,
+    "dedupe_ok": true,
+    "evidence_tier": "measured",
+    "elite_count": 11,
+    "elapsed_ms": 258
+  }
+}

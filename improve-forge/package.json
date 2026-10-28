@@ -1,0 +1,17 @@
+{
+  "name": "improve-forge",
+  "productName": "Hell Forge Swarm",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Local desktop forge for the WPAI improve-swarm. Real falsification via the local PowerShell engine — no web server, no Gemini, no API key.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "lint": "node --check main.js && node --check preload.js && node --check renderer/app.js"
+  },
+  "author": "Wizard Productions AI Studio",
+  "license": "UNLICENSED",
+  "devDependencies": {
+    "electron": "^33.2.0"
+  }
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-762df3ca06ab",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:47:37.5073681Z",
+  "money": false,
+  "lever": "throughput",
+  "hypothesis": "On token-budget, improve throughput by applying double-entry via copy-domain-foreign; validate with property-quick.",
+  "probe": "property-quick",
+  "metrics": {
+    "elapsed_ms": 38,
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "balanced": true
+  },
+  "target": "token-budget",
+  "auto": true,
+  "evidence_tier": "measured",
+  "invert": "copy-domain-foreign",
+  "tactic": "double-entry"
+}

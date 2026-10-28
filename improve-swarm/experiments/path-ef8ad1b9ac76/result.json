@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ef8ad1b9ac76",
+  "verdict": "SUPPORTED",
+  "note": "CLI help surface 4/4 improve verbs",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:49.7860383Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "help_learn": true,
+    "help_auto": true,
+    "elapsed_ms": 639,
+    "help_elite": true,
+    "help_unleash": true,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "probe": "static-score",
+  "invert": "invert-assumption",
+  "tactic": "delete-abstraction",
+  "lever": "determinism",
+  "hypothesis": "On improve-swarm, improve determinism by applying delete-abstraction via invert-assumption; validate with static-score.",
+  "evidence_tier": "structural",
+  "auto": true
+}

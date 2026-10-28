@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-03c11eba3e8a",
+  "verdict": "SUPPORTED",
+  "note": "chaos ok catalog=264 ban_score=0.016",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:47.8142625Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "status_ok": true,
+    "banned_score": 0.016,
+    "elapsed_ms": 263,
+    "catalog": 264,
+    "files_ok": true,
+    "evidence_tier": "measured"
+  },
+  "probe": "schema-validate",
+  "invert": "auto-before-human-for-drafts",
+  "tactic": "starve-input",
+  "lever": "token-cost",
+  "hypothesis": "On improve-swarm, improve token-cost by applying starve-input via auto-before-human-for-drafts; validate with schema-validate.",
+  "evidence_tier": "measured",
+  "auto": true
+}

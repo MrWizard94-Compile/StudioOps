@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d57b00c978c6",
+  "verdict": "INCONCLUSIVE",
+  "note": "static fit 0.5837 — needs deeper micro-impl",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.0485262Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "evidence_tier": "weak",
+    "score": 0.5837,
+    "elapsed_ms": 110,
+    "stagnation_pen": 0.0,
+    "files_ok": true,
+    "banned": false
+  },
+  "probe": "dry-run-script",
+  "invert": "remove-instead-of-add",
+  "tactic": "eager",
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying eager via remove-instead-of-add; validate with dry-run-script.",
+  "evidence_tier": "weak",
+  "auto": true
+}

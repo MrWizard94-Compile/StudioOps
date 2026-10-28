@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-fc21874c8647",
+  "verdict": "INCONCLUSIVE",
+  "note": "observe snapshot command available (structural only)",
+  "source": "auto-experiment",
+  "ts": "2026-07-12T09:48:23.9286060Z",
+  "money": false,
+  "metrics": {
+    "elapsed_ms": 1,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "invert": "do-opposite",
+  "tactic": "invert-control",
+  "evidence_tier": "structural",
+  "lever": "throughput",
+  "target": "observability",
+  "probe": "property-quick",
+  "hypothesis": "On observability, improve throughput by applying invert-control via do-opposite; validate with property-quick.",
+  "auto": true
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-4c7fc2e7d1a3",
+  "verdict": "INCONCLUSIVE",
+  "note": "observe snapshot command available (structural only)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:34:00.8398769Z",
+  "money": false,
+  "lever": "throughput",
+  "hypothesis": "On observability, improve throughput by applying invert-control via borrow-from-idle-games; validate with schema-validate.",
+  "probe": "schema-validate",
+  "evidence_tier": "structural",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 0,
+    "files_ok": true
+  },
+  "target": "observability",
+  "auto": true,
+  "tactic": "invert-control",
+  "invert": "borrow-from-idle-games"
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7b316017eb39",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:44:11.0331325Z",
+  "money": false,
+  "hypothesis": "On studioops-blackboard, improve reliability by applying double-entry via borrow-from-accounting; validate with micro-bench.",
+  "target": "studioops-blackboard",
+  "evidence_tier": "measured",
+  "probe": "micro-bench",
+  "auto": true,
+  "lever": "reliability",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 24,
+    "evidence_tier": "measured",
+    "shape_ok": true
+  },
+  "invert": "borrow-from-accounting",
+  "tactic": "double-entry"
+}

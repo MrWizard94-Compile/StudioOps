@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-16a243f92a5d",
+  "verdict": "INCONCLUSIVE",
+  "note": "observe snapshot command available (structural only)",
+  "source": "auto-experiment",
+  "ts": "2026-07-12T12:46:01.3186630Z",
+  "money": false,
+  "probe": "static-score",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 2,
+    "evidence_tier": "structural"
+  },
+  "invert": "remove-instead-of-add",
+  "lever": "determinism",
+  "auto": true,
+  "tactic": "double-entry",
+  "target": "observability",
+  "evidence_tier": "structural",
+  "hypothesis": "On observability, improve determinism by applying double-entry via remove-instead-of-add; validate with static-score."
+}

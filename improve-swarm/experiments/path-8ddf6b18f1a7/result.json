@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-8ddf6b18f1a7",
+  "verdict": "SUPPORTED",
+  "note": "ledger append+dedupe ok elite=12",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:37:09.5338193Z",
+  "money": false,
+  "auto": true,
+  "invert": "slow-down-to-speed-up",
+  "target": "improve-swarm",
+  "metrics": {
+    "dedupe_ok": true,
+    "files_ok": true,
+    "elapsed_ms": 314,
+    "outcomes_grew": true,
+    "evidence_tier": "measured",
+    "elite_count": 12
+  },
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via slow-down-to-speed-up; validate with grep-fit.",
+  "lever": "throughput",
+  "tactic": "double-entry",
+  "evidence_tier": "measured",
+  "probe": "grep-fit"
+}

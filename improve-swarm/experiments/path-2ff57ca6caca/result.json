@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2ff57ca6caca",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:31:51.8480067Z",
+  "money": false,
+  "lever": "reliability",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying remove-feature via guess-then-falsify; validate with dry-run-script.",
+  "probe": "dry-run-script",
+  "evidence_tier": "measured",
+  "metrics": {
+    "evidence_tier": "measured",
+    "elapsed_ms": 15,
+    "shape_ok": true,
+    "files_ok": true
+  },
+  "target": "studioops-blackboard",
+  "auto": true,
+  "tactic": "remove-feature",
+  "invert": "guess-then-falsify"
+}
