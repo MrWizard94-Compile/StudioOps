@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>PyMason — Wizard Productions AI Studio</title>
+    <meta
+      name="description"
+      content="PyMason: visual block-based Python studio from WPAI. Free limited feedback trial — blocks ↔ real Python, dual edit, debugger, stage, and AI apply."
+    />
+    <meta name="theme-color" content="#0a0706" />
+    <meta name="author" content="Wizard Productions AI Studio" />
+    <meta name="copyright" content="© 2026 Wizard Productions AI Studio. All Rights Reserved." />
+    <link rel="canonical" href="https://wpaistudio.net/pymason.html" />
+    <meta property="og:title" content="PyMason — free feedback trial | WPAI" />
+    <meta
+      property="og:description"
+      content="Learn on it. Keep shipping on it. Visual Python forge from Wizard Productions AI Studio. Limited free trial — thoughtful feedback expected."
+    />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wpaistudio.net/pymason.html" />
+    <meta property="og:image" content="https://wpaistudio.net/assets/pymason.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="PyMason — WPAI" />
+    <meta name="twitter:description" content="Visual Python studio. Free feedback trial from Wizard Productions AI Studio." />
+    <meta name="twitter:image" content="https://wpaistudio.net/assets/pymason.png" />
+    <meta name="robots" content="index,follow" />
+    <link rel="icon" href="assets/brand-mark.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+    <style>
+      /* Page-local accents for trial notice */
+      .trial-box {
+        margin: 1.25rem 0 1.5rem;
+        padding: 1rem 1.15rem;
+        border-radius: var(--radius-lg);
+        border: 1px solid hsl(23 100% 57% / 0.35);
+        background: hsl(23 100% 57% / 0.08);
+      }
+      .trial-box h3 {
+        font-family: var(--font-heading);
+        color: var(--ember);
+        font-size: 1.05rem;
+        margin: 0 0 0.5rem;
+      }
+      .trial-box p {
+        margin: 0;
+        color: var(--muted-fg);
+        font-size: 0.95rem;
+      }
+      .trial-box ul {
+        margin: 0.65rem 0 0;
+        padding-left: 1.2rem;
+        color: var(--muted-fg);
+        font-size: 0.92rem;
+      }
+      .feedback-list {
+        margin: 0.75rem 0 0;
+        padding-left: 1.2rem;
+        color: var(--muted-fg);
+      }
+      .feedback-list li {
+        margin-bottom: 0.35rem;
+      }
+      .how-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 0.85rem;
+        margin: 1rem 0 1.5rem;
+      }
+      .how-step {
+        border: 1px solid var(--line);
+        border-radius: var(--radius);
+        padding: 1rem;
+        background: hsl(var(--card) / 0.6);
+      }
+      .how-step .n {
+        font-family: var(--font-heading);
+        color: var(--ember);
+        font-size: 0.85rem;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .how-step h3 {
+        font-family: var(--font-heading);
+        font-size: 1.05rem;
+        margin: 0.35rem 0;
+        color: var(--fg);
+      }
+      .how-step p {
+        margin: 0;
+        font-size: 0.9rem;
+        color: var(--muted-fg);
+      }
+    </style>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap inner">
+        <a class="brand-lockup" href="index.html" aria-label="WPAI home">
+          <img class="logo-wide" src="assets/logo-horizontal.png" height="36" alt="Wizard Productions AI Studio" />
+          <span class="text" style="display: none" aria-hidden="true">
+            <strong>Wizard Productions AI Studio</strong>
+            <span>wpaistudio.net</span>
+          </span>
+        </a>
+        <nav class="nav nav-desktop" data-nav aria-label="Primary">
+          <a href="index.html">Home</a>
+          <a href="products.html">Products</a>
+          <a href="studio.html">Studio</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+          <a class="nav-cta" href="https://wpaistudio.gumroad.com" rel="noopener noreferrer">Storefront</a>
+        </nav>
+        <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-label="Menu">☰</button>
+      </div>
+      <nav class="mobile-nav" data-nav-panel data-nav aria-label="Mobile">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="studio.html">Studio</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="https://wpaistudio.gumroad.com" rel="noopener noreferrer">Shop storefront</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero wrap">
+        <p class="eyebrow">Software · Free feedback trial</p>
+        <h1>PyMason — <em>learn on it. Keep shipping on it.</em></h1>
+        <p class="lede">
+          Visual, block-based Python from Wizard Productions AI Studio. Real code, real run
+          (Pyodide), dual edit, debugger, stage, educator tools, and AI that can apply to your
+          workspace — one forge from first <code>print</code> to portfolio craft.
+        </p>
+      </section>
+
+      <section class="wrap">
+        <article class="product-block" id="overview">
+          <div class="media">
+            <img src="assets/pymason.png" width="800" height="500" alt="PyMason — visual Python studio" />
+          </div>
+          <div>
+            <div class="card-meta">
+              <span class="pill live">Beta</span>
+              <span class="pill">Developer / Education</span>
+              <span class="price">Free trial</span>
+            </div>
+            <h2>PyMason</h2>
+            <p class="tagline">Blocks ↔ real Python. Building Code. Logically.</p>
+            <p>
+              Drag blocks, read the Python as it appears, run it in the browser, step into Free
+              Python when you’re ready. Built for beginners and ND learners who hit the blank-page
+              wall — and for craftsmen who want structure visible before the IDE.
+            </p>
+
+            <div class="trial-box" id="trial">
+              <h3>Limited free trial — feedback required</h3>
+              <p>
+                By participating in this free trial you agree to provide
+                <strong>thoughtful feedback</strong> after using PyMason (what worked, where you got
+                stuck, and whether you’d use it again). This is a studio beta, not a finished
+                storefront product.
+              </p>
+              <ul>
+                <li>Sign-in gate includes a required agreement checkbox</li>
+                <li>Trial access (when demo auth is enabled): <strong>studio</strong> / <strong>wpai-forge</strong></li>
+                <li>© 2026 Wizard Productions AI Studio. All Rights Reserved.</li>
+              </ul>
+            </div>
+
+            <div class="cta-row" style="margin: 1rem 0 1.25rem">
+              <a class="btn btn-primary" href="/pymason/">Start free trial</a>
+              <a
+                class="btn btn-ghost"
+                href="mailto:rob@wpaistudio.net?subject=PyMason%20feedback%20(trial)"
+                >Send feedback</a
+              >
+              <a class="btn btn-ghost" href="products.html">All products</a>
+            </div>
+
+            <div class="how-grid" aria-label="How to try">
+              <div class="how-step">
+                <div class="n">Step 01</div>
+                <h3>Open the trial</h3>
+                <p>Enter the forge, agree to feedback, sign in with the trial credentials.</p>
+              </div>
+              <div class="how-step">
+                <div class="n">Step 02</div>
+                <h3>Build &amp; Run</h3>
+                <p>Try an Example, snap blocks, hit Run — real Python via Pyodide in the browser.</p>
+              </div>
+              <div class="how-step">
+                <div class="n">Step 03</div>
+                <h3>Tell us the truth</h3>
+                <p>Where you stuck, what felt powerful, what felt like a demo. Honest &gt; polite.</p>
+              </div>
+            </div>
+
+            <div class="highlight">
+              <strong>Not a kids’ toy UI.</strong> Forge aesthetic, dual Blocks / Free Python, Bridge
+              practice for the block→text cliff, Learner → Classroom → Pro path, portfolio export.
+            </div>
+          </div>
+        </article>
+
+        <div class="section-head" style="margin-top: 2rem">
+          <p class="eyebrow">Inside the forge</p>
+          <h2>What you can try today</h2>
+        </div>
+        <div class="grid-2">
+          <div class="feature">
+            <h3>Dual surface</h3>
+            <p>Blocks→Code live, Free Python editor, Dual view, Import .py, Python→Blocks (AST when ready).</p>
+          </div>
+          <div class="feature">
+            <h3>Run &amp; debug</h3>
+            <p>Pyodide execution, Stage (turtle/plot), breakpoints, step/continue, assert / Tests panel.</p>
+          </div>
+          <div class="feature">
+            <h3>Deep toolbox</h3>
+            <p>
+              Fundamentals plus Time, Random, Path, Regex, Collections, Stats, Encode, Itertools, and
+              more (~250 custom generators).
+            </p>
+          </div>
+          <div class="feature">
+            <h3>AI (optional)</h3>
+            <p>xAI / Ollama / Claude with your keys — local only. Agent Apply can push into the workspace.</p>
+          </div>
+          <div class="feature">
+            <h3>Learn → career</h3>
+            <p>Examples, Bridge practice, syntax coach, curriculum checks, portfolio package export.</p>
+          </div>
+          <div class="feature">
+            <h3>Classroom tools</h3>
+            <p>Local roster, assignments, autograde, gradebook, student mode — browser-side, no LMS tax.</p>
+          </div>
+        </div>
+
+        <div class="band" id="feedback" style="margin-top: 2rem">
+          <h2>After you try it — send feedback</h2>
+          <p>
+            Thoughtful means concrete. A few sentences is enough. Use the button or email
+            <a href="mailto:rob@wpaistudio.net">rob@wpaistudio.net</a> with subject
+            <em>PyMason feedback (trial)</em>.
+          </p>
+          <ul class="feedback-list">
+            <li>Did you get a program to <strong>Run</strong>?</li>
+            <li>Where did you get stuck or confused?</li>
+            <li>Would you use this to <strong>learn</strong>, <strong>teach</strong>, or <strong>prototype</strong>?</li>
+            <li>What felt like a serious tool vs a demo?</li>
+            <li>Would you pay later — and for what (web / desktop / classroom)?</li>
+          </ul>
+          <div class="cta-row" style="margin-top: 1.25rem">
+            <a class="btn btn-primary" href="/pymason/">Open PyMason trial</a>
+            <a
+              class="btn btn-ghost"
+              href="mailto:rob@wpaistudio.net?subject=PyMason%20feedback%20(trial)&body=1)%20Did%20Run%20work%3F%0A2)%20Where%20stuck%3F%0A3)%20Learn%20%2F%20teach%20%2F%20prototype%3F%0A4)%20Serious%20vs%20demo%3F%0A5)%20Pay%20later%20for%3F%0A"
+              >Email feedback</a
+            >
+          </div>
+        </div>
+
+        <div class="band" style="margin-top: 1.25rem">
+          <h2>Desktop later</h2>
+          <p>
+            Electron desktop (one-time license path) ships when the store listing is live. This
+            page is the free web trial for feedback — not the paid installers yet.
+          </p>
+          <div class="cta-row">
+            <a class="btn btn-ghost" href="https://wpaistudio.gumroad.com" rel="noopener noreferrer"
+              >WPAI storefront</a
+            >
+            <a class="btn btn-ghost" href="contact.html">Contact the studio</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap inner">
+        <div>
+          <strong>© <span id="y"></span> Wizard Productions AI Studio. All Rights Reserved.</strong>
+          <div>PyMason · Forging the future of creative media.</div>
+          <nav class="footer-nav" style="margin-top: 0.75rem">
+            <a href="products.html">Products</a>
+            <a href="pymason.html">PyMason</a>
+            <a href="studio.html">Studio</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+          </nav>
+        </div>
+        <p class="disclosure">
+          Made in open collaboration with AI tools; written into shape, directed, and finished by
+          Rob Bulkley. AI is in the name — the wizard is in the work. Free trial access is for
+          feedback; the product remains proprietary.
+        </p>
+      </div>
+    </footer>
+    <script src="js/site.js"></script>
+  </body>
+</html>
+

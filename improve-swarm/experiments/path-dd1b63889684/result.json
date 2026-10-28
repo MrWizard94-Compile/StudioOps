@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-dd1b63889684",
+  "verdict": "SUPPORTED",
+  "note": "self-swarm v2 surface complete (stag+tier+unleash)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:28:15.6021909Z",
+  "money": false,
+  "hypothesis": "On studioops-cli, improve throughput by applying genome-mutate via less-script-more-agent; validate with static-score.",
+  "lever": "throughput",
+  "invert": "less-script-more-agent",
+  "auto": true,
+  "probe": "static-score",
+  "target": "studioops-cli",
+  "evidence_tier": "structural",
+  "tactic": "genome-mutate",
+  "metrics": {
+    "elapsed_ms": 5,
+    "evidence_tier": "structural",
+    "has_evidence_tier": true,
+    "has_self": true,
+    "has_stagnation": true,
+    "has_unleash": true,
+    "has_auto": true,
+    "files_ok": true
+  }
+}

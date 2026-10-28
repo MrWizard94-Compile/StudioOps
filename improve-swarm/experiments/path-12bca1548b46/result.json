@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-12bca1548b46",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:47:22.3905037Z",
+  "money": false,
+  "target": "studioops-blackboard",
+  "lever": "reliability",
+  "probe": "property-quick",
+  "metrics": {
+    "shape_ok": true,
+    "elapsed_ms": 33,
+    "evidence_tier": "measured",
+    "files_ok": true
+  },
+  "evidence_tier": "measured",
+  "invert": "slow-down-to-speed-up",
+  "auto": true,
+  "tactic": "measurement-first",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying measurement-first via slow-down-to-speed-up; validate with property-quick."
+}

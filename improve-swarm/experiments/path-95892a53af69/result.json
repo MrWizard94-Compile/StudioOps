@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-95892a53af69",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:59:40.1848340Z",
+  "money": false,
+  "evidence_tier": "measured",
+  "probe": "schema-validate",
+  "tactic": "janus-not-direct-write",
+  "metrics": {
+    "elapsed_ms": 26,
+    "evidence_tier": "measured",
+    "shape_ok": true,
+    "files_ok": true
+  },
+  "hypothesis": "On studioops-blackboard, improve reliability by applying janus-not-direct-write via less-agent-more-script; validate with schema-validate.",
+  "lever": "reliability",
+  "target": "studioops-blackboard",
+  "invert": "less-agent-more-script",
+  "auto": true
+}

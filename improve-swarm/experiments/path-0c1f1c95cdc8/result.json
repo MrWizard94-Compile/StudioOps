@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-0c1f1c95cdc8",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:02:58.2863804Z",
+  "money": false,
+  "target": "observability",
+  "lever": "latency",
+  "hypothesis": "On observability, improve latency by applying cache via guess-then-falsify; validate with static-score.",
+  "tactic": "cache",
+  "auto": true,
+  "probe": "static-score",
+  "metrics": {
+    "elapsed_ms": 5,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "invert": "guess-then-falsify",
+  "evidence_tier": "structural"
+}

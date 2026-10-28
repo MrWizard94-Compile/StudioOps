@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-e13f9607721d",
+  "verdict": "SUPPORTED",
+  "note": "single-writer bans/outcomes paths exist",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:53:00.9456850Z",
+  "money": false,
+  "lever": "determinism",
+  "tactic": "bus-not-call",
+  "invert": "auto-before-human-for-drafts",
+  "probe": "static-score",
+  "auto": true,
+  "metrics": {
+    "bans_path": "C:\\WPAI\\Workspace\\.wpai\\improve-swarm\\bans.json",
+    "evidence_tier": "structural",
+    "files_ok": true,
+    "elapsed_ms": 13,
+    "bans_exists": true
+  },
+  "evidence_tier": "structural",
+  "target": "improve-swarm",
+  "hypothesis": "On improve-swarm, improve determinism by applying bus-not-call via auto-before-human-for-drafts; validate with static-score."
+}

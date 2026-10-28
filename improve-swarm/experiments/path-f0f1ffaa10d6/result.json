@@ -2,21 +2,21 @@
   "schema_version": "1.0.0",
   "path_id": "path-f0f1ffaa10d6",
   "verdict": "SUPPORTED",
-  "note": "outcomes append + elite archive count=24",
+  "note": "outcomes append + elite archive count=33",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:53.8016456Z",
+  "ts": "2026-07-11T10:45:04.0708549Z",
   "money": false,
-  "target": "improve-swarm",
   "tactic": "double-entry",
-  "auto": true,
-  "lever": "throughput",
-  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via borrow-from-idle-games; validate with docs-delta.",
-  "invert": "borrow-from-idle-games",
-  "probe": "docs-delta",
   "metrics": {
-    "elite_count": 24,
     "outcomes_grew": true,
-    "files_ok": true,
-    "elapsed_ms": 71
-  }
+    "elapsed_ms": 84,
+    "elite_count": 33,
+    "files_ok": true
+  },
+  "probe": "docs-delta",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via borrow-from-idle-games; validate with docs-delta.",
+  "lever": "throughput",
+  "target": "improve-swarm",
+  "invert": "borrow-from-idle-games"
 }

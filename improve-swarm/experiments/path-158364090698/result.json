@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-158364090698",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=139 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:47.4219343Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "ms": 138.9,
+    "evidence_tier": "measured",
+    "elapsed_ms": 186,
+    "files_ok": true,
+    "ban_gene_signal": -1.0
+  },
+  "probe": "micro-bench",
+  "invert": "slow-down-to-speed-up",
+  "tactic": "cache",
+  "lever": "latency",
+  "hypothesis": "On improve-swarm, improve latency by applying cache via slow-down-to-speed-up; validate with micro-bench.",
+  "evidence_tier": "measured",
+  "auto": true
+}

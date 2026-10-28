@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c87ed620971a",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:01:04.2493548Z",
+  "money": false,
+  "auto": true,
+  "metrics": {
+    "elapsed_ms": 23,
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "shape_ok": true
+  },
+  "lever": "reliability",
+  "invert": "auto-before-human-for-drafts",
+  "evidence_tier": "measured",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying measurement-first via auto-before-human-for-drafts; validate with grep-fit.",
+  "tactic": "measurement-first",
+  "probe": "grep-fit",
+  "target": "studioops-blackboard"
+}

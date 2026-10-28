@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-aa16e5b260e4",
+  "verdict": "SUPPORTED",
+  "note": "ledger append+dedupe ok elite=51",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:56.5616199Z",
+  "money": false,
+  "target": "studioops-cli",
+  "metrics": {
+    "outcomes_grew": true,
+    "elapsed_ms": 92,
+    "dedupe_ok": true,
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "elite_count": 51
+  },
+  "probe": "grep-fit",
+  "invert": "borrow-from-accounting",
+  "tactic": "append-only",
+  "lever": "latency",
+  "hypothesis": "On studioops-cli, improve latency by applying append-only via borrow-from-accounting; validate with grep-fit.",
+  "evidence_tier": "measured",
+  "auto": true
+}

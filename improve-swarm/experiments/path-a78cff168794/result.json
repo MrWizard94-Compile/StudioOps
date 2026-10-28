@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-a78cff168794",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:53:56.9546764Z",
+  "money": false,
+  "target": "overnight",
+  "tactic": "measurement-first",
+  "metrics": {
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "kill_blocks": true,
+    "elapsed_ms": 137
+  },
+  "evidence_tier": "measured",
+  "auto": true,
+  "lever": "token-cost",
+  "invert": "less-script-more-agent",
+  "hypothesis": "On overnight, improve token-cost by applying measurement-first via less-script-more-agent; validate with unit-test.",
+  "probe": "unit-test"
+}

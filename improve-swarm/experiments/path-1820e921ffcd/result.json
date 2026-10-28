@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1820e921ffcd",
+  "verdict": "SUPPORTED",
+  "note": "self-meta measurement ms=33",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:04.4207828Z",
+  "money": false,
+  "tactic": "measurement-first",
+  "metrics": {
+    "ms": 33,
+    "files_ok": true,
+    "elapsed_ms": 33
+  },
+  "probe": "static-score",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve token-cost by applying measurement-first via borrow-from-idle-games; validate with static-score.",
+  "lever": "token-cost",
+  "target": "studioops-cli",
+  "invert": "borrow-from-idle-games"
+}

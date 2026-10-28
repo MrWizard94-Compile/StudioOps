@@ -2,20 +2,20 @@
   "schema_version": "1.0.0",
   "path_id": "path-d543db7c8585",
   "verdict": "SUPPORTED",
-  "note": "self-meta measurement ms=29",
+  "note": "self-meta measurement ms=39",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:54.4191532Z",
+  "ts": "2026-07-11T10:44:58.7319415Z",
   "money": false,
-  "target": "studioops-cli",
   "tactic": "measurement-first",
-  "auto": true,
-  "lever": "token-cost",
-  "hypothesis": "On studioops-cli, improve token-cost by applying measurement-first via remove-instead-of-add; validate with unit-test.",
-  "invert": "remove-instead-of-add",
-  "probe": "unit-test",
   "metrics": {
-    "ms": 29,
+    "ms": 39,
     "files_ok": true,
-    "elapsed_ms": 29
-  }
+    "elapsed_ms": 39
+  },
+  "probe": "unit-test",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve token-cost by applying measurement-first via remove-instead-of-add; validate with unit-test.",
+  "lever": "token-cost",
+  "target": "studioops-cli",
+  "invert": "remove-instead-of-add"
 }

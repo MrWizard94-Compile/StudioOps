@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ad782e742507",
+  "verdict": "INCONCLUSIVE",
+  "note": "observe snapshot command available (structural only)",
+  "source": "auto-experiment",
+  "ts": "2026-07-12T15:03:20.1902181Z",
+  "money": false,
+  "evidence_tier": "structural",
+  "target": "observability",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 6,
+    "files_ok": true
+  },
+  "tactic": "remove-feature",
+  "lever": "reliability",
+  "auto": true,
+  "invert": "measure-then-guess",
+  "probe": "dry-run-script",
+  "hypothesis": "On observability, improve reliability by applying remove-feature via measure-then-guess; validate with dry-run-script."
+}

@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-cfa559f5cf15",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-12T14:58:51.1716321Z",
+  "money": false,
+  "hypothesis": "On overnight, improve latency by applying janus-not-direct-write via invert-assumption; validate with unit-test.",
+  "auto": true,
+  "probe": "unit-test",
+  "target": "overnight",
+  "lever": "latency",
+  "invert": "invert-assumption",
+  "evidence_tier": "measured",
+  "metrics": {
+    "evidence_tier": "measured",
+    "elapsed_ms": 82,
+    "kill_blocks": true,
+    "files_ok": true
+  },
+  "tactic": "janus-not-direct-write"
+}

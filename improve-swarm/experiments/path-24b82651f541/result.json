@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-24b82651f541",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:11:10.5853920Z",
+  "money": false,
+  "auto": true,
+  "lever": "reliability",
+  "probe": "dry-run-script",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying double-entry via auto-before-human-for-drafts; validate with dry-run-script.",
+  "evidence_tier": "measured",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 30,
+    "evidence_tier": "measured",
+    "shape_ok": true
+  },
+  "tactic": "double-entry",
+  "target": "studioops-blackboard",
+  "invert": "auto-before-human-for-drafts"
+}

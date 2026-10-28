@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-relcheck0001",
+  "verdict": "SUPPORTED",
+  "note": "fail-closed ban score=0.016 diversity=2",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:51:49.6363522Z",
+  "money": false,
+  "invert": "none",
+  "hypothesis": "reliability fail-closed check",
+  "lever": "reliability",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "ban_raise_context_latency": true,
+    "evidence_tier": "measured",
+    "diverse_targets": 2,
+    "elapsed_ms": 451,
+    "banned_score": 0.016
+  },
+  "target": "improve-swarm",
+  "evidence_tier": "measured",
+  "tactic": "fail-closed",
+  "probe": "unit-test"
+}

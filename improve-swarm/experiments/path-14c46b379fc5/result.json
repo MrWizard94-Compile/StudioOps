@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-14c46b379fc5",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:02:06.1860662Z",
+  "money": false,
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "measured",
+    "shape_ok": true,
+    "elapsed_ms": 25
+  },
+  "lever": "reliability",
+  "invert": "measure-then-guess",
+  "evidence_tier": "measured",
+  "auto": true,
+  "target": "studioops-blackboard",
+  "tactic": "measurement-first",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying measurement-first via measure-then-guess; validate with self-check.",
+  "probe": "self-check"
+}

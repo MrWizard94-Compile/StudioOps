@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-bf51a3c8c4d9",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=193 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:42:41.4322758Z",
+  "money": false,
+  "probe": "schema-validate",
+  "invert": "borrow-from-accounting",
+  "tactic": "measurement-first",
+  "evidence_tier": "measured",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve determinism by applying measurement-first via borrow-from-accounting; validate with schema-validate.",
+  "target": "studioops-cli",
+  "metrics": {
+    "elapsed_ms": 256,
+    "ms": 192.8,
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "ban_gene_signal": -1.0
+  },
+  "lever": "determinism"
+}

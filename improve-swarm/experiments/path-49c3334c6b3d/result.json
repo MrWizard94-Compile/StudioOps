@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-49c3334c6b3d",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:57:57.3497542Z",
+  "money": false,
+  "auto": true,
+  "evidence_tier": "measured",
+  "tactic": "double-entry",
+  "metrics": {
+    "kill_blocks": true,
+    "files_ok": true,
+    "elapsed_ms": 150,
+    "evidence_tier": "measured"
+  },
+  "probe": "static-score",
+  "lever": "determinism",
+  "target": "overnight",
+  "hypothesis": "On overnight, improve determinism by applying double-entry via remove-instead-of-add; validate with static-score.",
+  "invert": "remove-instead-of-add"
+}

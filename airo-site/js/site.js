@@ -90,4 +90,52 @@
     });
   }
 
+  // ---- scroll-reveal (re-add Airo's Framer Motion whileInView) ----
+  // The React capture froze every section wrapper in its initial hidden state
+  // (opacity:0; transform:translateY(28-32px)) and dropped the motion runtime
+  // that revealed them on scroll — so everything below the hero stayed invisible.
+  // Reveal each wrapper as it scrolls into view (or immediately if it is already
+  // on screen). Selector matches only those frozen wrappers: inline opacity is
+  // exactly "0" and not !important, which excludes decorative low-opacity layers
+  // (opacity:0.x) and the hidden ad iframes (opacity:0 !important).
+  var revealTargets = [].slice
+    .call(document.querySelectorAll("div[style]"))
+    .filter(function (el) {
+      return (
+        el.style.opacity === "0" &&
+        el.style.getPropertyPriority("opacity") !== "important"
+      );
+    });
+  if (revealTargets.length) {
+    var reveal = function (el) {
+      el.style.opacity = "1";
+      el.style.transform = "none";
+    };
+    var reduceMotion =
+      window.matchMedia &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    if (reduceMotion || !("IntersectionObserver" in window)) {
+      // Content first: show everything at once, skip the animation.
+      revealTargets.forEach(reveal);
+    } else {
+      revealTargets.forEach(function (el) {
+        el.style.transition = "opacity .6s ease, transform .6s ease";
+      });
+      var io = new IntersectionObserver(
+        function (entries, obs) {
+          entries.forEach(function (entry) {
+            if (entry.isIntersecting) {
+              reveal(entry.target);
+              obs.unobserve(entry.target);
+            }
+          });
+        },
+        { rootMargin: "0px 0px -8%", threshold: 0.1 }
+      );
+      revealTargets.forEach(function (el) {
+        io.observe(el);
+      });
+    }
+  }
+
 })();

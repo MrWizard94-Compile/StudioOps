@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f46d8fb72dfb",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=132 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:34:00.6948222Z",
+  "money": false,
+  "lever": "throughput",
+  "hypothesis": "On studioops-cli, improve throughput by applying cache via do-opposite; validate with static-score.",
+  "probe": "static-score",
+  "evidence_tier": "measured",
+  "metrics": {
+    "evidence_tier": "measured",
+    "ms": 132.5,
+    "elapsed_ms": 177,
+    "ban_gene_signal": -1.0,
+    "files_ok": true
+  },
+  "target": "studioops-cli",
+  "auto": true,
+  "tactic": "cache",
+  "invert": "do-opposite"
+}

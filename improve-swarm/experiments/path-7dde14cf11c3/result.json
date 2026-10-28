@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7dde14cf11c3",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:18:51.4321435Z",
+  "money": false,
+  "invert": "measure-then-guess",
+  "tactic": "measurement-first",
+  "hypothesis": "On observability, improve throughput by applying measurement-first via measure-then-guess; validate with unit-test.",
+  "lever": "throughput",
+  "probe": "unit-test",
+  "evidence_tier": "structural",
+  "metrics": {
+    "elapsed_ms": 5,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "auto": true,
+  "target": "observability"
+}

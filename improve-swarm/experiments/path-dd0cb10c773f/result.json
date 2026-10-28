@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-dd0cb10c773f",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:25:13.9141387Z",
+  "money": false,
+  "invert": "auto-before-human-for-drafts",
+  "probe": "unit-test",
+  "lever": "throughput",
+  "metrics": {
+    "evidence_tier": "structural",
+    "files_ok": true,
+    "elapsed_ms": 3
+  },
+  "hypothesis": "On observability, improve throughput by applying measurement-first via auto-before-human-for-drafts; validate with unit-test.",
+  "evidence_tier": "structural",
+  "tactic": "measurement-first",
+  "target": "observability",
+  "auto": true
+}

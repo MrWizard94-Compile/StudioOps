@@ -4,17 +4,20 @@
   "verdict": "SUPPORTED",
   "note": "budget ledger balanced",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:54.4758508Z",
+  "ts": "2026-07-13T16:50:17.1467088Z",
   "money": false,
-  "target": "token-budget",
-  "tactic": "double-entry",
-  "auto": true,
   "lever": "throughput",
-  "hypothesis": "On token-budget, improve throughput by applying double-entry via measure-then-guess; validate with static-score.",
+  "tactic": "double-entry",
   "invert": "measure-then-guess",
-  "probe": "static-score",
+  "hypothesis": "On token-budget, improve throughput by applying double-entry via measure-then-guess; validate with static-score.",
+  "auto": true,
   "metrics": {
+    "files_ok": true,
     "balanced": true,
-    "elapsed_ms": 10
-  }
+    "elapsed_ms": 80,
+    "evidence_tier": "measured"
+  },
+  "evidence_tier": "measured",
+  "probe": "static-score",
+  "target": "token-budget"
 }

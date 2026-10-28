@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-9fd781fef688",
+  "verdict": "SUPPORTED",
+  "note": "blackboard shape ok",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:50:17.7435308Z",
+  "money": false,
+  "lever": "reliability",
+  "tactic": "measurement-first",
+  "invert": "invert-assumption",
+  "hypothesis": "On studioops-blackboard, improve reliability by applying measurement-first via invert-assumption; validate with dry-run-script.",
+  "auto": true,
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 24,
+    "shape_ok": true,
+    "evidence_tier": "measured"
+  },
+  "evidence_tier": "measured",
+  "probe": "dry-run-script",
+  "target": "studioops-blackboard"
+}

@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Contact — Wizard Productions AI Studio</title>
+    <meta
+      name="description"
+      content="Get in touch with WPAI. Sync inquiries, licensing, collaboration, or just a question — send a message and Rob will get back to you."
+    />
+    <meta name="theme-color" content="#0a0706" />
+    <link rel="canonical" href="https://wpaistudio.net/contact.html" />
+    <meta property="og:title" content="Contact — Wizard Productions AI Studio" />
+    <meta property="og:description" content="Sync, licensing, collaboration, or a product question." />
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://wpaistudio.net/contact.html" />
+    <meta property="og:image" content="https://wpaistudio.net/assets/brand.jpg" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="icon" href="assets/brand-mark.jpg" type="image/jpeg" />
+    <link rel="stylesheet" href="css/fonts.css" />
+    <link rel="stylesheet" href="css/styles.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="wrap inner">
+        <a class="brand-lockup" href="index.html" aria-label="WPAI home">
+          <img class="logo-wide" src="assets/logo-horizontal.png" height="36" alt="Wizard Productions AI Studio" />
+          <span class="text" style="display:none" aria-hidden="true">
+            <strong>Wizard Productions AI Studio</strong>
+            <span>wpaistudio.net</span>
+          </span>
+        </a>
+        <nav class="nav nav-desktop" data-nav aria-label="Primary">
+          <a href="index.html">Home</a>
+          <a href="products.html">Products</a>
+          <a href="studio.html">Studio</a>
+          <a href="about.html">About</a>
+          <a href="contact.html">Contact</a>
+          <a class="nav-cta" href="https://wpaistudio.gumroad.com" rel="noopener noreferrer">Storefront</a>
+        </nav>
+        <button class="nav-toggle" type="button" data-nav-toggle aria-expanded="false" aria-label="Menu">☰</button>
+      </div>
+      <nav class="mobile-nav" data-nav-panel data-nav aria-label="Mobile">
+        <a href="index.html">Home</a>
+        <a href="products.html">Products</a>
+        <a href="studio.html">Studio</a>
+        <a href="about.html">About</a>
+        <a href="contact.html">Contact</a>
+        <a href="https://wpaistudio.gumroad.com" rel="noopener noreferrer">Shop storefront</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="page-hero wrap">
+        <p class="eyebrow">Contact</p>
+        <h1>Get in <em>touch.</em></h1>
+        <p class="lede">
+          Sync inquiries, licensing, collaboration, or a question about a product — send a message
+          and I'll get back to you.
+        </p>
+      </section>
+
+      <section class="wrap">
+        <div class="split">
+          <div class="panel">
+            <h2>Send a message</h2>
+            <div id="contact-success" class="success" hidden>
+              <strong>Message sent.</strong>
+              <p style="margin: 0.4rem 0 0">I'll get back to you via email. (Your mail app should have opened with a draft.)</p>
+            </div>
+            <form id="contact-form" class="form" novalidate>
+              <label>
+                What's this about?
+                <select name="topic" required>
+                  <option value="General">General</option>
+                  <option value="Sync / Licensing">Sync / Licensing</option>
+                  <option value="Collaboration">Collaboration</option>
+                  <option value="Product question">Product question</option>
+                  <option value="Other">Other</option>
+                </select>
+              </label>
+              <label>
+                Name
+                <input type="text" name="name" autocomplete="name" placeholder="Your name" />
+              </label>
+              <label>
+                Email
+                <input type="email" name="email" autocomplete="email" placeholder="you@example.com" required />
+              </label>
+              <label>
+                Message
+                <textarea name="message" required placeholder="What can I help with?"></textarea>
+              </label>
+              <div>
+                <button class="btn btn-primary" type="submit">Send message</button>
+              </div>
+              <p style="margin: 0; font-size: 0.85rem; color: var(--smoke)">
+                Opens your email client to <a href="mailto:rob@wpaistudio.net">rob@wpaistudio.net</a>.
+                No data is stored on this site.
+              </p>
+            </form>
+          </div>
+
+          <div class="panel">
+            <p class="eyebrow">Find WPAI</p>
+            <h2>Other ways in</h2>
+            <ul class="contact-list">
+              <li>
+                <span class="label">Studio email</span>
+                <a href="mailto:rob@wpaistudio.net">rob@wpaistudio.net</a>
+              </li>
+              <li>
+                <span class="label">Storefront</span>
+                <a href="https://wpaistudio.gumroad.com" rel="noopener noreferrer">All products on Gumroad</a>
+              </li>
+              <li>
+                <span class="label">GitHub</span>
+                <a href="https://github.com/MrWizard94-Compile" rel="noopener noreferrer"
+                  >Open source work and free tiers</a
+                >
+              </li>
+              <li>
+                <span class="label">Domain</span>
+                <span>wpaistudio.net</span>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="site-footer">
+      <div class="wrap inner">
+        <div>
+          <strong>© <span id="y"></span> Wizard Productions AI Studio</strong>
+          <div>Forging the future of creative media.</div>
+          <nav class="footer-nav" style="margin-top: 0.75rem">
+            <a href="products.html">Products</a>
+            <a href="studio.html">Studio</a>
+            <a href="about.html">About</a>
+            <a href="contact.html">Contact</a>
+          </nav>
+        </div>
+        <p class="disclosure">
+          Made in open collaboration with AI tools; written into shape, directed, and finished by
+          Rob Bulkley. AI is in the name — the wizard is in the work.
+        </p>
+      </div>
+    </footer>
+    <script src="js/site.js"></script>
+  </body>
+</html>

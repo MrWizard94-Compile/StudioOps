@@ -1,0 +1,21 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-089b9a944862",
+  "verdict": "SUPPORTED",
+  "note": "status survives chaos check catalog=214",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:03.6525610Z",
+  "money": false,
+  "tactic": "fuzz",
+  "metrics": {
+    "elapsed_ms": 106,
+    "status_ok": true,
+    "files_ok": true
+  },
+  "probe": "schema-validate",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve latency by applying fuzz via borrow-from-idle-games; validate with schema-validate.",
+  "lever": "latency",
+  "target": "improve-swarm",
+  "invert": "borrow-from-idle-games"
+}

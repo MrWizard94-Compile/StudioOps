@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ea8ba20b473a",
+  "verdict": "SUPPORTED",
+  "note": "catalog present; reseed requires -Force",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:49.8829174Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "force_required_for_reseed": true,
+    "evidence_tier": "structural",
+    "elapsed_ms": 2,
+    "files_ok": true,
+    "catalog_exists": true
+  },
+  "probe": "property-quick",
+  "invert": "invert-assumption",
+  "tactic": "canary",
+  "lever": "token-cost",
+  "hypothesis": "On improve-swarm, improve token-cost by applying canary via invert-assumption; validate with property-quick.",
+  "evidence_tier": "structural",
+  "auto": true
+}

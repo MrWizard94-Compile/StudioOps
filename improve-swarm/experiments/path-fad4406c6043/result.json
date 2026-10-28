@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-fad4406c6043",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:15:47.9667056Z",
+  "money": false,
+  "lever": "observability",
+  "tactic": "cut-context",
+  "evidence_tier": "structural",
+  "hypothesis": "On observability, improve observability by applying cut-context via less-script-more-agent; validate with self-check.",
+  "target": "observability",
+  "invert": "less-script-more-agent",
+  "auto": true,
+  "probe": "self-check",
+  "metrics": {
+    "elapsed_ms": 5,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-b6fe1e316427",
+  "verdict": "SUPPORTED",
+  "note": "self-swarm v2 surface complete (stag+tier+unleash)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:55:06.9983079Z",
+  "money": false,
+  "auto": true,
+  "invert": "human-before-auto",
+  "metrics": {
+    "has_stagnation": true,
+    "has_unleash": true,
+    "evidence_tier": "structural",
+    "has_evidence_tier": true,
+    "has_self": true,
+    "files_ok": true,
+    "has_auto": true,
+    "elapsed_ms": 10
+  },
+  "tactic": "genome-mutate",
+  "probe": "grep-fit",
+  "target": "improve-swarm",
+  "lever": "throughput",
+  "hypothesis": "On improve-swarm, improve throughput by applying genome-mutate via human-before-auto; validate with grep-fit.",
+  "evidence_tier": "structural"
+}

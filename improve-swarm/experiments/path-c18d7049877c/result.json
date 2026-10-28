@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-c18d7049877c",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:46:12.1082193Z",
+  "money": false,
+  "target": "overnight",
+  "tactic": "double-entry",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 174,
+    "evidence_tier": "measured",
+    "kill_blocks": true
+  },
+  "evidence_tier": "measured",
+  "invert": "copy-domain-foreign",
+  "probe": "property-quick",
+  "hypothesis": "On overnight, improve reliability by applying double-entry via copy-domain-foreign; validate with property-quick.",
+  "auto": true,
+  "lever": "reliability"
+}

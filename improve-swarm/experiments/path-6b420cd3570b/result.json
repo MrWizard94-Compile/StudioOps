@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-6b420cd3570b",
+  "verdict": "SUPPORTED",
+  "note": "single-writer bans/outcomes paths exist",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:42:15.2308338Z",
+  "money": false,
+  "metrics": {
+    "bans_exists": true,
+    "elapsed_ms": 24,
+    "bans_path": "C:\\WPAI\\Workspace\\.wpai\\improve-swarm\\bans.json",
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via less-agent-more-script; validate with static-score.",
+  "target": "improve-swarm",
+  "evidence_tier": "structural",
+  "invert": "less-agent-more-script",
+  "probe": "static-score",
+  "auto": true,
+  "tactic": "janus-not-direct-write",
+  "lever": "latency"
+}

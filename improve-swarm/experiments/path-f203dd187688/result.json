@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f203dd187688",
+  "verdict": "SUPPORTED",
+  "note": "loops kill switch active when set",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:51:46.7599949Z",
+  "money": false,
+  "lever": "determinism",
+  "metrics": {
+    "files_ok": true,
+    "kill_blocks": true,
+    "elapsed_ms": 170,
+    "evidence_tier": "measured"
+  },
+  "target": "overnight",
+  "probe": "self-check",
+  "invert": "less-script-more-agent",
+  "tactic": "cache",
+  "hypothesis": "On overnight, improve determinism by applying cache via less-script-more-agent; validate with self-check.",
+  "auto": true,
+  "evidence_tier": "measured"
+}

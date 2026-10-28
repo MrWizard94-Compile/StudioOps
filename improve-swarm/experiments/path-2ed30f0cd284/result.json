@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2ed30f0cd284",
+  "verdict": "SUPPORTED",
+  "note": "self-swarm v2 surface complete (stag+tier+unleash)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:49:49.8351149Z",
+  "money": false,
+  "target": "improve-swarm",
+  "metrics": {
+    "has_self": true,
+    "has_stagnation": true,
+    "has_evidence_tier": true,
+    "elapsed_ms": 3,
+    "has_unleash": true,
+    "has_auto": true,
+    "files_ok": true,
+    "evidence_tier": "structural"
+  },
+  "probe": "dry-run-script",
+  "invert": "less-agent-more-script",
+  "tactic": "batch",
+  "lever": "throughput",
+  "hypothesis": "On improve-swarm, improve throughput by applying batch via less-agent-more-script; validate with dry-run-script.",
+  "evidence_tier": "structural",
+  "auto": true
+}

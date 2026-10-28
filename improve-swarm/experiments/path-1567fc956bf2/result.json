@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-1567fc956bf2",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:36:16.9515082Z",
+  "money": false,
+  "tactic": "janus-not-direct-write",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 39,
+    "balanced": true,
+    "evidence_tier": "measured"
+  },
+  "probe": "property-quick",
+  "invert": "borrow-from-idle-games",
+  "lever": "reliability",
+  "auto": true,
+  "hypothesis": "On token-budget, improve reliability by applying janus-not-direct-write via borrow-from-idle-games; validate with property-quick.",
+  "target": "token-budget",
+  "evidence_tier": "measured"
+}

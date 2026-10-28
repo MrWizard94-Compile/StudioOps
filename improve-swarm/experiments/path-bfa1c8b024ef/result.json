@@ -4,18 +4,18 @@
   "verdict": "SUPPORTED",
   "note": "reversibility: outcomes/bans are additive; no destructive catalog force without -Force",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:54.4412330Z",
+  "ts": "2026-07-11T10:44:58.7642310Z",
   "money": false,
-  "target": "studioops-cli",
   "tactic": "shadow-mode",
-  "auto": true,
-  "lever": "latency",
-  "hypothesis": "On studioops-cli, improve latency by applying shadow-mode via less-script-more-agent; validate with schema-validate.",
-  "invert": "less-script-more-agent",
-  "probe": "schema-validate",
   "metrics": {
+    "elapsed_ms": 2,
     "force_required_for_reseed": true,
-    "elapsed_ms": 1,
     "files_ok": true
-  }
+  },
+  "probe": "schema-validate",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve latency by applying shadow-mode via less-script-more-agent; validate with schema-validate.",
+  "lever": "latency",
+  "target": "studioops-cli",
+  "invert": "less-script-more-agent"
 }

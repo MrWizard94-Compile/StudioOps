@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-e7dee9f7c9f1",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:55:07.1856091Z",
+  "money": false,
+  "auto": true,
+  "invert": "human-before-auto",
+  "metrics": {
+    "elapsed_ms": 55,
+    "files_ok": true,
+    "balanced": true,
+    "evidence_tier": "measured"
+  },
+  "tactic": "bus-not-call",
+  "probe": "property-quick",
+  "target": "token-budget",
+  "lever": "determinism",
+  "hypothesis": "On token-budget, improve determinism by applying bus-not-call via human-before-auto; validate with property-quick.",
+  "evidence_tier": "measured"
+}

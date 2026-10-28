@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-ce56bbf55c31",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:54:40.2818841Z",
+  "money": false,
+  "probe": "grep-fit",
+  "metrics": {
+    "elapsed_ms": 5,
+    "evidence_tier": "structural",
+    "files_ok": true
+  },
+  "evidence_tier": "structural",
+  "hypothesis": "On observability, improve throughput by applying double-entry via measure-then-guess; validate with grep-fit.",
+  "invert": "measure-then-guess",
+  "target": "observability",
+  "tactic": "double-entry",
+  "lever": "throughput",
+  "auto": true
+}

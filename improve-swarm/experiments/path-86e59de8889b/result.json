@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-86e59de8889b",
+  "verdict": "SUPPORTED",
+  "note": "ledger append+dedupe ok elite=12",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:12:44.9046354Z",
+  "money": false,
+  "evidence_tier": "measured",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve throughput by applying double-entry via borrow-from-avionics; validate with dry-run-script.",
+  "metrics": {
+    "evidence_tier": "measured",
+    "dedupe_ok": true,
+    "outcomes_grew": true,
+    "elapsed_ms": 321,
+    "files_ok": true,
+    "elite_count": 12
+  },
+  "probe": "dry-run-script",
+  "target": "improve-swarm",
+  "lever": "throughput",
+  "invert": "borrow-from-avionics",
+  "tactic": "double-entry"
+}

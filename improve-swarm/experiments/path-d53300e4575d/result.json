@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d53300e4575d",
+  "verdict": "INCONCLUSIVE",
+  "note": "static fit 0.623 — needs deeper micro-impl",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:32:55.5904739Z",
+  "money": false,
+  "lever": "token-cost",
+  "hypothesis": "On studioops-cli, improve token-cost by applying split-concern via remove-instead-of-add; validate with schema-validate.",
+  "probe": "schema-validate",
+  "evidence_tier": "weak",
+  "metrics": {
+    "elapsed_ms": 158,
+    "stagnation_pen": 0.0,
+    "banned": false,
+    "evidence_tier": "weak",
+    "files_ok": true,
+    "score": 0.623
+  },
+  "target": "studioops-cli",
+  "auto": true,
+  "tactic": "split-concern",
+  "invert": "remove-instead-of-add"
+}

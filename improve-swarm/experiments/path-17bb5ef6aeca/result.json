@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-17bb5ef6aeca",
+  "verdict": "INCONCLUSIVE",
+  "note": "static fit 0.6698 — needs deeper micro-impl",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:48:47.9099862Z",
+  "money": false,
+  "tactic": "invert-control",
+  "auto": true,
+  "target": "improve-swarm",
+  "hypothesis": "On improve-swarm, improve throughput by applying invert-control via less-script-more-agent; validate with docs-delta.",
+  "probe": "docs-delta",
+  "invert": "less-script-more-agent",
+  "metrics": {
+    "elapsed_ms": 391,
+    "files_ok": true,
+    "stagnation_pen": 0.025,
+    "banned": false,
+    "score": 0.6698,
+    "evidence_tier": "weak"
+  },
+  "lever": "throughput",
+  "evidence_tier": "weak"
+}

@@ -4,19 +4,19 @@
   "verdict": "SUPPORTED",
   "note": "static self-fit score=0.733",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:53.6060859Z",
+  "ts": "2026-07-11T10:45:03.4640144Z",
   "money": false,
-  "target": "improve-swarm",
   "tactic": "janus-not-direct-write",
-  "auto": true,
-  "lever": "latency",
-  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via guess-then-falsify; validate with static-score.",
-  "invert": "guess-then-falsify",
-  "probe": "static-score",
   "metrics": {
+    "banned": false,
+    "elapsed_ms": 32,
     "score": 0.733,
-    "elapsed_ms": 30,
-    "files_ok": true,
-    "banned": false
-  }
+    "files_ok": true
+  },
+  "probe": "static-score",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve latency by applying janus-not-direct-write via guess-then-falsify; validate with static-score.",
+  "lever": "latency",
+  "target": "improve-swarm",
+  "invert": "guess-then-falsify"
 }

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d6acb9835d9b",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:41:37.1788506Z",
+  "money": false,
+  "hypothesis": "On observability, improve reliability by applying snapshot via auto-before-human-for-drafts; validate with dry-run-script.",
+  "evidence_tier": "structural",
+  "probe": "dry-run-script",
+  "lever": "reliability",
+  "invert": "auto-before-human-for-drafts",
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "structural",
+    "elapsed_ms": 1
+  },
+  "target": "observability",
+  "tactic": "snapshot",
+  "auto": true
+}

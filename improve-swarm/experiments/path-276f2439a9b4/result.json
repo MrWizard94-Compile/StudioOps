@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-276f2439a9b4",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:17:12.3185373Z",
+  "money": false,
+  "hypothesis": "On observability, improve observability by applying queue via borrow-from-avionics; validate with grep-fit.",
+  "auto": true,
+  "invert": "borrow-from-avionics",
+  "probe": "grep-fit",
+  "evidence_tier": "structural",
+  "tactic": "queue",
+  "target": "observability",
+  "lever": "observability",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 3,
+    "evidence_tier": "structural"
+  }
+}

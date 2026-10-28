@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-0d78a33ed8f1",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:44:10.9119225Z",
+  "money": false,
+  "hypothesis": "On observability, improve reliability by applying measurement-first via borrow-from-accounting; validate with grep-fit.",
+  "target": "observability",
+  "evidence_tier": "structural",
+  "probe": "grep-fit",
+  "auto": true,
+  "lever": "reliability",
+  "metrics": {
+    "files_ok": true,
+    "elapsed_ms": 6,
+    "evidence_tier": "structural"
+  },
+  "invert": "borrow-from-accounting",
+  "tactic": "measurement-first"
+}

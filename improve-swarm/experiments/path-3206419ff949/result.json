@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-3206419ff949",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:38:18.0652810Z",
+  "money": false,
+  "invert": "borrow-from-compilers",
+  "hypothesis": "On observability, improve determinism by applying double-entry via borrow-from-compilers; validate with dry-run-script.",
+  "probe": "dry-run-script",
+  "metrics": {
+    "files_ok": true,
+    "evidence_tier": "structural",
+    "elapsed_ms": 5
+  },
+  "auto": true,
+  "lever": "determinism",
+  "evidence_tier": "structural",
+  "target": "observability",
+  "tactic": "double-entry"
+}

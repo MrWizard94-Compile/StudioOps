@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-selftest0001",
+  "verdict": "SUPPORTED",
+  "note": "fail-closed ban score=0.016 diversity=2",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T16:52:07.5278807Z",
+  "money": false,
+  "metrics": {
+    "banned_score": 0.016,
+    "elapsed_ms": 202,
+    "ban_raise_context_latency": true,
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "diverse_targets": 2
+  },
+  "auto": true,
+  "invert": "none",
+  "target": "improve-swarm",
+  "evidence_tier": "measured",
+  "lever": "reliability",
+  "probe": "unit-test",
+  "tactic": "fail-closed",
+  "hypothesis": "On improve-swarm, improve reliability by applying fail-closed; validate with unit-test."
+}

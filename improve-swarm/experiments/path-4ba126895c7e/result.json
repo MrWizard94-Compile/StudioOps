@@ -1,0 +1,26 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-4ba126895c7e",
+  "verdict": "SUPPORTED",
+  "note": "CLI help surface 4/4 improve verbs",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:35:40.7781790Z",
+  "money": false,
+  "probe": "micro-bench",
+  "hypothesis": "On studioops-cli, improve determinism by applying document-only via less-script-more-agent; validate with micro-bench.",
+  "metrics": {
+    "help_unleash": true,
+    "elapsed_ms": 1198,
+    "files_ok": true,
+    "help_elite": true,
+    "evidence_tier": "structural",
+    "help_learn": true,
+    "help_auto": true
+  },
+  "auto": true,
+  "target": "studioops-cli",
+  "invert": "less-script-more-agent",
+  "lever": "determinism",
+  "evidence_tier": "structural",
+  "tactic": "document-only"
+}

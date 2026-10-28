@@ -1,0 +1,27 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-e51f127b7e00",
+  "verdict": "SUPPORTED",
+  "note": "self-swarm v2 surface complete (stag+tier+unleash)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:49:57.0363351Z",
+  "money": false,
+  "tactic": "genome-mutate",
+  "hypothesis": "On improve-swarm, improve throughput by applying genome-mutate via measure-then-guess; validate with schema-validate.",
+  "metrics": {
+    "has_stagnation": true,
+    "evidence_tier": "structural",
+    "has_evidence_tier": true,
+    "elapsed_ms": 10,
+    "has_auto": true,
+    "files_ok": true,
+    "has_self": true,
+    "has_unleash": true
+  },
+  "probe": "schema-validate",
+  "evidence_tier": "structural",
+  "target": "improve-swarm",
+  "invert": "measure-then-guess",
+  "lever": "throughput",
+  "auto": true
+}

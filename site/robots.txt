@@ -1,0 +1,5 @@
+# wpaistudio.net
+# Cloudflare prepends its managed AI-crawler rules above this file at the edge.
+# This file only adds the sitemap location; it sets no crawl rules of its own.
+
+Sitemap: https://wpaistudio.net/sitemap.xml

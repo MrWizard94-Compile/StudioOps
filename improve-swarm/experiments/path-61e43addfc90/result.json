@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-61e43addfc90",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=151 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:39:30.8590555Z",
+  "money": false,
+  "tactic": "measurement-first",
+  "lever": "determinism",
+  "invert": "auto-before-human-for-drafts",
+  "evidence_tier": "measured",
+  "probe": "grep-fit",
+  "metrics": {
+    "ms": 151.3,
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "elapsed_ms": 199,
+    "ban_gene_signal": -1.0
+  },
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve determinism by applying measurement-first via auto-before-human-for-drafts; validate with grep-fit.",
+  "target": "studioops-cli"
+}

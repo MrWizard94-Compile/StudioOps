@@ -4,16 +4,16 @@
   "verdict": "SUPPORTED",
   "note": "observe snapshot command available",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:40:49.4851196Z",
+  "ts": "2026-07-11T10:44:58.9262924Z",
   "money": false,
-  "target": "observability",
   "tactic": "cache",
-  "auto": true,
-  "lever": "determinism",
-  "hypothesis": "On observability, improve determinism by applying cache via less-agent-more-script; validate with unit-test.",
-  "invert": "less-agent-more-script",
-  "probe": "unit-test",
   "metrics": {
-    "elapsed_ms": 6
-  }
+    "elapsed_ms": 3
+  },
+  "probe": "unit-test",
+  "auto": true,
+  "hypothesis": "On observability, improve determinism by applying cache via less-agent-more-script; validate with unit-test.",
+  "lever": "determinism",
+  "target": "observability",
+  "invert": "less-agent-more-script"
 }

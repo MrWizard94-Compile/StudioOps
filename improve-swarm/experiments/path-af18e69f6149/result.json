@@ -1,0 +1,23 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-af18e69f6149",
+  "verdict": "SUPPORTED",
+  "note": "budget ledger balanced",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:36:53.2317035Z",
+  "money": false,
+  "probe": "static-score",
+  "evidence_tier": "measured",
+  "auto": true,
+  "invert": "human-before-auto",
+  "tactic": "janus-not-direct-write",
+  "lever": "reliability",
+  "metrics": {
+    "elapsed_ms": 47,
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "balanced": true
+  },
+  "hypothesis": "On token-budget, improve reliability by applying janus-not-direct-write via human-before-auto; validate with static-score.",
+  "target": "token-budget"
+}

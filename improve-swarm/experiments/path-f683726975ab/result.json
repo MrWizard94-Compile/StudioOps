@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-f683726975ab",
+  "verdict": "INCONCLUSIVE",
+  "note": "static fit 0.6234 — needs deeper micro-impl",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:32:55.3792765Z",
+  "money": false,
+  "lever": "throughput",
+  "hypothesis": "On studioops-cli, improve throughput by applying lazy via borrow-from-avionics; validate with docs-delta.",
+  "probe": "docs-delta",
+  "evidence_tier": "weak",
+  "metrics": {
+    "elapsed_ms": 157,
+    "stagnation_pen": 0.0,
+    "banned": false,
+    "evidence_tier": "weak",
+    "files_ok": true,
+    "score": 0.6234
+  },
+  "target": "studioops-cli",
+  "auto": true,
+  "tactic": "lazy",
+  "invert": "borrow-from-avionics"
+}

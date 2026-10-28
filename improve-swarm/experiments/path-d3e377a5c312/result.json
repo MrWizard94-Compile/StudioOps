@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-d3e377a5c312",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T15:28:15.9346930Z",
+  "money": false,
+  "hypothesis": "On observability, improve throughput by applying invert-control via copy-domain-foreign; validate with static-score.",
+  "lever": "throughput",
+  "invert": "copy-domain-foreign",
+  "auto": true,
+  "probe": "static-score",
+  "target": "observability",
+  "evidence_tier": "structural",
+  "tactic": "invert-control",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 4,
+    "files_ok": true
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7d7a78615f50",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:55:16.1651252Z",
+  "money": false,
+  "probe": "property-quick",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 6,
+    "files_ok": true
+  },
+  "auto": true,
+  "lever": "throughput",
+  "evidence_tier": "structural",
+  "hypothesis": "On observability, improve throughput by applying double-entry via remove-instead-of-add; validate with property-quick.",
+  "invert": "remove-instead-of-add",
+  "target": "observability",
+  "tactic": "double-entry"
+}

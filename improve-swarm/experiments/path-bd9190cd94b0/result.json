@@ -1,0 +1,25 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-bd9190cd94b0",
+  "verdict": "SUPPORTED",
+  "note": "chaos ok catalog=98 ban_score=0.016",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T12:52:32.2265915Z",
+  "money": false,
+  "target": "studioops-cli",
+  "invert": "borrow-from-avionics",
+  "auto": true,
+  "hypothesis": "On studioops-cli, improve latency by applying fuzz via borrow-from-avionics; validate with unit-test.",
+  "probe": "unit-test",
+  "evidence_tier": "measured",
+  "tactic": "fuzz",
+  "lever": "latency",
+  "metrics": {
+    "evidence_tier": "measured",
+    "elapsed_ms": 601,
+    "status_ok": true,
+    "files_ok": true,
+    "catalog": 98,
+    "banned_score": 0.016
+  }
+}

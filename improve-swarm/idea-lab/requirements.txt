@@ -1,0 +1,4 @@
+# IDEA Lab — isolated hypothesis testing (container venv)
+# Keep lean: no paid APIs, no network deps at runtime.
+pytest==8.3.5
+jsonschema==4.23.0

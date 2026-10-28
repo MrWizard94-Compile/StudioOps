@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-2bb7d1334019",
+  "verdict": "INCONCLUSIVE",
+  "note": "observe snapshot command available (structural only)",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T21:31:51.7873974Z",
+  "money": false,
+  "lever": "latency",
+  "hypothesis": "On observability, improve latency by applying chaos-inject via borrow-from-avionics; validate with self-check.",
+  "probe": "self-check",
+  "evidence_tier": "structural",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 0,
+    "files_ok": true
+  },
+  "target": "observability",
+  "auto": true,
+  "tactic": "chaos-inject",
+  "invert": "borrow-from-avionics"
+}

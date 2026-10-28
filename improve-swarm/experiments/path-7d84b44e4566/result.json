@@ -1,0 +1,24 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-7d84b44e4566",
+  "verdict": "SUPPORTED",
+  "note": "meta maps ms=276 ban_sig=-1",
+  "source": "auto-experiment",
+  "ts": "2026-07-13T15:27:34.9976096Z",
+  "money": false,
+  "auto": true,
+  "invert": "less-agent-more-script",
+  "lever": "latency",
+  "evidence_tier": "measured",
+  "tactic": "cache",
+  "target": "improve-swarm",
+  "probe": "property-quick",
+  "metrics": {
+    "evidence_tier": "measured",
+    "files_ok": true,
+    "elapsed_ms": 395,
+    "ban_gene_signal": -1.0,
+    "ms": 275.9
+  },
+  "hypothesis": "On improve-swarm, improve latency by applying cache via less-agent-more-script; validate with property-quick."
+}

@@ -2,19 +2,22 @@
   "schema_version": "1.0.0",
   "path_id": "path-a8398d344cf1",
   "verdict": "SUPPORTED",
-  "note": "overnight path remains kill-switch gated (chaos/reliability)",
+  "note": "loops kill switch active when set",
   "source": "auto-experiment",
-  "ts": "2026-07-11T10:39:56.1513837Z",
+  "ts": "2026-07-12T09:48:24.0396138Z",
   "money": false,
-  "hypothesis": "On overnight, improve latency by applying local-ollama via measure-then-guess; validate with schema-validate.",
-  "invert": "measure-then-guess",
-  "tactic": "local-ollama",
-  "target": "overnight",
   "metrics": {
-    "loops_kill": false,
-    "elapsed_ms": 9
+    "kill_blocks": true,
+    "elapsed_ms": 71,
+    "files_ok": true,
+    "evidence_tier": "measured"
   },
-  "auto": true,
+  "invert": "none",
+  "tactic": "local-ollama",
+  "evidence_tier": "measured",
   "lever": "latency",
-  "probe": "schema-validate"
+  "target": "overnight",
+  "probe": "static-score",
+  "hypothesis": "",
+  "auto": true
 }

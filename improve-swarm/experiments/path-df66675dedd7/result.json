@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-df66675dedd7",
+  "verdict": "SUPPORTED",
+  "note": "observe snapshot command available",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T11:48:20.9975763Z",
+  "money": false,
+  "probe": "dry-run-script",
+  "metrics": {
+    "evidence_tier": "structural",
+    "elapsed_ms": 5,
+    "files_ok": true
+  },
+  "invert": "copy-domain-foreign",
+  "evidence_tier": "structural",
+  "target": "observability",
+  "lever": "determinism",
+  "tactic": "cache",
+  "hypothesis": "On observability, improve determinism by applying cache via copy-domain-foreign; validate with dry-run-script.",
+  "auto": true
+}

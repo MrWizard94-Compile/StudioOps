@@ -1,0 +1,22 @@
+{
+  "schema_version": "1.0.0",
+  "path_id": "path-487a42a2abb6",
+  "verdict": "SUPPORTED",
+  "note": "static self-fit score=0.694",
+  "source": "auto-experiment",
+  "ts": "2026-07-11T10:45:04.1274866Z",
+  "money": false,
+  "tactic": "local-ollama",
+  "metrics": {
+    "banned": false,
+    "elapsed_ms": 32,
+    "score": 0.694,
+    "files_ok": true
+  },
+  "probe": "grep-fit",
+  "auto": true,
+  "hypothesis": "On improve-swarm, improve latency by applying local-ollama via slow-down-to-speed-up; validate with grep-fit.",
+  "lever": "latency",
+  "target": "improve-swarm",
+  "invert": "slow-down-to-speed-up"
+}
